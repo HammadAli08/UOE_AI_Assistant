@@ -1,0 +1,279 @@
+================================================================================
+                     UOE AI ASSISTANT - PROJECT REPORT
+================================================================================
+
+Project: RAG-based AI Assistant for University of Education Lahore
+Version: 1.0.0
+Date: January 2025
+
+================================================================================
+                              EXECUTIVE SUMMARY
+================================================================================
+
+This project implements a production-grade Retrieval-Augmented Generation (RAG)
+system designed to answer queries about University of Education programs,
+courses, and regulations. The system combines vector search, semantic reranking,
+and GPT-4 generation with streaming responses and conversation memory.
+
+================================================================================
+                              ARCHITECTURE OVERVIEW
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              FRONTEND                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  Single-page HTML/CSS/JS Test Console                               │    │
+│  │  - Namespace selector (BS/ADP, MS/PhD, Rules)                       │    │
+│  │  - Query enhancement toggle                                          │    │
+│  │  - Chunk count selector (10/20/30)                                  │    │
+│  │  - SSE streaming chat interface                                     │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼ HTTP/SSE
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           FASTAPI BACKEND                                    │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐          │
+│  │ POST /api/chat   │  │ POST /api/chat/  │  │ GET /api/        │          │
+│  │ (non-streaming)  │  │ stream (SSE)     │  │ namespaces       │          │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           RAG PIPELINE                                       │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │                                                                       │  │
+│  │   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐         │  │
+│  │   │  Query   │──▶│Retriever │──▶│ Reranker │──▶│Generator │         │  │
+│  │   │ Enhancer │   │(Pinecone)│   │(BGE-large│   │ (GPT-4o) │         │  │
+│  │   │(GPT-4o-  │   │          │   │ HF API)  │   │          │         │  │
+│  │   │ mini)    │   │          │   │          │   │          │         │  │
+│  │   └──────────┘   └──────────┘   └──────────┘   └──────────┘         │  │
+│  │         │                                            │               │  │
+│  │         └────────────── Memory ◄─────────────────────┘               │  │
+│  │                      (Redis Cloud)                                   │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         EXTERNAL SERVICES                                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │   Pinecone   │  │    OpenAI    │  │  HuggingFace │  │ Redis Cloud  │   │
+│  │  Vector DB   │  │   GPT-4o     │  │   Inference  │  │   Memory     │   │
+│  │              │  │  GPT-4o-mini │  │  BGE-reranker│  │              │   │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘   │
+│                                                                             │
+│  ┌──────────────┐                                                          │
+│  │  LangSmith   │  (Optional observability/tracing)                        │
+│  └──────────────┘                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+                              COMPONENT DETAILS
+================================================================================
+
+1. QUERY ENHANCER (query_enhancer.py)
+   ─────────────────────────────────
+   - Model: GPT-4o-mini (fast, cost-effective)
+   - Purpose: Expands user queries for better retrieval
+   - Temperature: 0.0 (deterministic output)
+   - Max tokens: 60 (concise expansion)
+   - Example: "BS CS fees" → "BS Computer Science program tuition fees cost"
+
+2. RETRIEVER (retriever.py)
+   ───────────────────────
+   - Vector DB: Pinecone (Serverless, AWS us-east-1)
+   - Embedding: text-embedding-3-large (3072 dimensions)
+   - Namespaces:
+     • bs-adp-schemes  → Bachelor's and ADP programs
+     • ms-phd-schemes  → Master's and PhD programs
+     • rules-regulations → University policies
+   - Default: 20 chunks retrieved
+
+3. RERANKER (reranker.py)
+   ─────────────────────
+   - Model: BAAI/bge-reranker-large
+   - Provider: HuggingFace Inference API
+   - Purpose: Semantic reranking of retrieved chunks
+   - Default: Top 5 chunks after reranking
+
+4. GENERATOR (generator.py)
+   ───────────────────────
+   - Model: GPT-4o
+   - Temperature: 0.1 (low randomness, factual)
+   - Max tokens: 5000
+   - Streaming: Enabled via generate_stream()
+   - System prompts: Namespace-specific (bs_adp, ms_phd, rules)
+
+5. MEMORY (memory.py)
+   ─────────────────
+   - Backend: Redis Cloud
+   - Host: redis-15521.c275.us-east-1-4.ec2.cloud.redislabs.com
+   - Port: 15521
+   - TTL: 1 hour per session
+   - Max turns: 10 per session
+   - Format: JSON-serialized conversation history
+
+6. PIPELINE (pipeline.py)
+   ─────────────────────
+   - Orchestrates all components
+   - Methods:
+     • query() - Non-streaming response
+     • stream_query() - SSE streaming response
+   - Includes LangSmith tracing (optional)
+
+================================================================================
+                              API ENDPOINTS
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Endpoint              │ Method │ Description                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ /                     │ GET    │ API status and version                     │
+│ /health               │ GET    │ Health check                               │
+│ /api/chat             │ POST   │ Non-streaming chat                         │
+│ /api/chat/stream      │ POST   │ Streaming chat (SSE)                       │
+│ /api/namespaces       │ GET    │ List available namespaces                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Request Body (POST /api/chat and /api/chat/stream):
+{
+    "query": "What are the admission requirements for BS CS?",
+    "namespace": "bs_adp",           // bs_adp | ms_phd | rules
+    "enhance_query": true,           // Toggle query enhancement
+    "top_k_retrieve": 20,            // Chunks to retrieve (1-50)
+    "top_k_rerank": 5,               // Chunks after reranking (1-20)
+    "session_id": "uuid-here"        // For conversation memory
+}
+
+================================================================================
+                           ENVIRONMENT VARIABLES
+================================================================================
+
+Required:
+  OPENAI_API_KEY         - OpenAI API key for GPT-4o and embeddings
+  PINECONE_API_KEY       - Pinecone vector database API key
+  HF_TOKEN               - HuggingFace token for reranker API
+
+Redis Cloud (configured in code):
+  Host: redis-15521.c275.us-east-1-4.ec2.cloud.redislabs.com
+  Port: 15521
+  Username: default
+  Password: WatITxRtYBcrlCrWRH7GB6WDt5tH1EdV
+
+Optional:
+  LANGCHAIN_TRACING_V2   - Set to "true" to enable LangSmith
+  LANGCHAIN_API_KEY      - LangSmith API key
+  LANGSMITH_PROJECT      - Project name (default: "uoe-rag-assistant")
+
+================================================================================
+                              FILE STRUCTURE
+================================================================================
+
+UOE_AI_ASSISTANT/
+├── backend/
+│   ├── main.py                    # FastAPI app with endpoints
+│   ├── pyproject.toml             # Project metadata
+│   ├── requirements.txt           # Python dependencies
+│   ├── README.md                  # Backend documentation
+│   │
+│   ├── rag_pipeline/
+│   │   ├── __init__.py            # Package exports
+│   │   ├── config.py              # Configuration constants
+│   │   ├── query_enhancer.py      # GPT-4o-mini query expansion
+│   │   ├── retriever.py           # Pinecone vector search
+│   │   ├── reranker.py            # BGE-large reranking
+│   │   ├── generator.py           # GPT-4o response generation
+│   │   ├── memory.py              # Redis Cloud conversation memory
+│   │   └── pipeline.py            # Main orchestration
+│   │
+│   ├── system_prompts/
+│   │   ├── bs_adp_systemprompt.txt
+│   │   ├── ms_phd_systemprompt.txt
+│   │   ├── query_enhancer_prompt.txt
+│   │   └── rules&regulations.txt
+│   │
+│   └── Data_Ingestion/
+│       ├── pinecone_ingestion.py  # Document ingestion script
+│       ├── processed_files.json   # Tracking ingested files
+│       └── DOCUMENTATION.md       # Ingestion documentation
+│
+├── frontend/
+│   └── index.html                 # Single-file test console
+│
+└── report.txt                     # This file
+
+================================================================================
+                              RUNNING THE PROJECT
+================================================================================
+
+1. Install dependencies:
+   cd backend
+   pip install -r requirements.txt
+
+2. Set environment variables:
+   export OPENAI_API_KEY="sk-..."
+   export PINECONE_API_KEY="..."
+   export HF_TOKEN="hf_..."
+
+3. Start the backend:
+   python main.py
+   # or
+   uvicorn main:app --reload --port 8000
+
+4. Open the frontend:
+   Open frontend/index.html in a browser
+   # or serve it:
+   python -m http.server 5500 --directory frontend
+
+5. Access the API:
+   http://localhost:8000       - API root
+   http://localhost:8000/docs  - Swagger UI
+
+================================================================================
+                              KEY FEATURES
+================================================================================
+
+✓ Streaming Responses - Real-time token-by-token generation via SSE
+✓ Conversation Memory - Redis Cloud-backed session history (1hr TTL)
+✓ Query Enhancement - GPT-4o-mini expands queries for better retrieval
+✓ Semantic Reranking - BGE-large reranks chunks by relevance
+✓ Namespace Isolation - Separate vector spaces for different content
+✓ Source Attribution - Returns source files and page numbers
+✓ LangSmith Tracing - Optional observability for debugging
+✓ CORS Enabled - Frontend can run from any origin
+
+================================================================================
+                              DEPENDENCIES
+================================================================================
+
+Core:
+  - fastapi >= 0.109.0
+  - uvicorn >= 0.27.0
+  - pydantic >= 2.0.0
+  - openai >= 1.12.0
+  - pinecone-client >= 3.0.0
+  - redis >= 5.0.0
+  - requests >= 2.31.0
+
+Optional:
+  - langsmith >= 0.1.0 (for tracing)
+
+================================================================================
+                              FUTURE IMPROVEMENTS
+================================================================================
+
+1. Add authentication (JWT/OAuth2)
+2. Implement rate limiting
+3. Add response caching layer
+4. Build production React/Next.js frontend
+5. Add multi-language support
+6. Implement feedback collection
+7. Add admin dashboard for monitoring
+
+================================================================================
+                                   END
+================================================================================

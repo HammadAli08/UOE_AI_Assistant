@@ -1,0 +1,33 @@
+# ── Python ──
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv/
+
+# ── Environment files ──
+.env
+.env.example
+example_.env
+
+# ── Logs ──
+*.log
+
+# ── Data folder ──
+@data/
+
+# ── Node / Frontend ──
+node_modules/
+frontend/dist/
+
+# ── IDE ──
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── OS ──
+.DS_Store
+Thumbs.db

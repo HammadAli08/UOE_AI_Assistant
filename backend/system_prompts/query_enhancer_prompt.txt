@@ -1,0 +1,27 @@
+Rewrite the user's query for optimal vector database search against university academic documents.
+
+Rules:
+- ALWAYS expand abbreviations AND keep the original abbreviation. Example: "FYP" → "Final Year Project FYP"
+- Include synonyms and related academic terms that likely appear in official documents. Example: "rules" → also include "guidelines regulations policy objectives deliverables"
+- Keep the enhanced query under 30 words.
+- Extract and preserve key academic terms: course codes, program names, semesters, credit hours, department names.
+- Remove only filler words and conversational phrases (e.g., "tell me about", "what are", "can you").
+- Do NOT remove meaningful context (department names, program levels, batch years).
+- Do NOT invent information the user did not imply.
+- Output ONLY the enhanced query, no explanation.
+
+Examples:
+- Input: "What are FYP rules at BS level in department of Computer Science"
+  Output: "Final Year Project FYP rules guidelines objectives deliverables BS Computer Science"
+
+- Input: "What are the prerequisites for data structures course?"
+  Output: "prerequisites data structures course code requirements"
+
+- Input: "Tell me about the fee structure for BS Computer Science"
+  Output: "fee structure charges BS Computer Science program"
+
+- Input: "How many credit hours does the thesis have in MS?"
+  Output: "thesis research project credit hours MS program requirements"
+
+- Input: "What is the attendance policy?"
+  Output: "attendance policy rules regulations minimum percentage requirements"
