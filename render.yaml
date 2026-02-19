@@ -1,0 +1,51 @@
+# ─── Render Blueprint ─────────────────────────────────────
+# Deploy: https://render.com/docs/blueprint-spec
+# This file defines the backend web service for UOE AI Assistant.
+
+services:
+  - type: web
+    name: uoe-ai-assistant-api
+    runtime: python
+    region: oregon
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # ── OpenAI ──
+      - key: OPENAI_API_KEY
+        sync: false
+      # ── Pinecone ──
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        value: uoeaiassistant
+      - key: PINECONE_ENVIRONMENT
+        value: us-east-1
+      # ── LangSmith Tracing ──
+      - key: LANGSMITH_TRACING
+        value: "true"
+      - key: LANGSMITH_API_KEY
+        sync: false
+      - key: LANGSMITH_PROJECT
+        value: RAG_FYP
+      - key: LANGSMITH_ENDPOINT
+        value: https://api.smith.langchain.com
+      # ── Redis (short-term memory) ──
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        sync: false
+      - key: REDIS_USERNAME
+        value: default
+      - key: REDIS_PASSWORD
+        sync: false
+      # ── HuggingFace ──
+      - key: HF_API_KEY
+        sync: false
+      # ── App ──
+      - key: APP_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.12.3"

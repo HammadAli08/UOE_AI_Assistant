@@ -4,6 +4,7 @@ FastAPI Backend for UOE AI Assistant
 Provides REST API endpoints for the RAG pipeline with streaming support.
 """
 
+import os
 import json
 import uuid
 import signal
@@ -212,7 +213,7 @@ async def get_namespaces():
 if __name__ == "__main__":
     import uvicorn
 
-    PORT = 8000
+    PORT = int(os.getenv("PORT", "8000"))
     _free_port(PORT)
     uvicorn.run(
         app,

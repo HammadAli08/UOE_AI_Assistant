@@ -42,10 +42,10 @@ if LANGSMITH_TRACING_ENABLED and LANGSMITH_API_KEY:
 # REDIS CONFIGURATION (Short-Term Memory — Redis Cloud)
 # =============================================================================
 
-REDIS_HOST = os.getenv("REDIS_HOST", "redis-15521.c275.us-east-1-4.ec2.cloud.redislabs.com")
-REDIS_PORT = int(os.getenv("REDIS_PORT", "15521"))
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_USERNAME = os.getenv("REDIS_USERNAME", "default")
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "WatITxRtYBcrlCrWRH7GB6WDt5tH1EdV")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 MEMORY_MAX_TURNS = int(os.getenv("MEMORY_MAX_TURNS", "10"))
 MEMORY_TTL_SECONDS = int(os.getenv("MEMORY_TTL_SECONDS", "1800"))
 
