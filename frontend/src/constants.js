@@ -4,6 +4,7 @@
 
 // In production (Vercel) VITE_API_URL points to the Render backend.
 // In local dev the Vite proxy forwards /api → localhost:8000.
+// API base URL (from environment variable or fallback to /api for local dev)
 export const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 // Base URL for non-api health checks (strips /api suffix)
