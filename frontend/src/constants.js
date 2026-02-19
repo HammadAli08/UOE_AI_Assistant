@@ -2,7 +2,12 @@
 // Application-wide constants
 // ──────────────────────────────────────────
 
-export const API_BASE = '/api';
+// In production (Vercel) VITE_API_URL points to the Render backend.
+// In local dev the Vite proxy forwards /api → localhost:8000.
+export const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+// Base URL for non-api health checks (strips /api suffix)
+export const BACKEND_BASE = API_BASE.replace(/\/api$/, '');
 
 export const NAMESPACES = [
   { id: 'bs-adp', label: 'BS / ADP Programs', icon: '🎓', color: 'brand' },

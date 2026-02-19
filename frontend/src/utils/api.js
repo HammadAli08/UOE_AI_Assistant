@@ -1,7 +1,7 @@
 // ──────────────────────────────────────────
 // API client — handles streaming (SSE) and non-streaming requests
 // ──────────────────────────────────────────
-import { API_BASE } from '@/constants';
+import { API_BASE, BACKEND_BASE } from '@/constants';
 
 /**
  * Check backend health.
@@ -9,7 +9,7 @@ import { API_BASE } from '@/constants';
  */
 export async function checkHealth() {
   try {
-    const res = await fetch('/health', { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BACKEND_BASE}/health`, { signal: AbortSignal.timeout(5000) });
     return res.ok;
   } catch {
     return false;
