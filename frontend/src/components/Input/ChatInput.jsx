@@ -16,6 +16,20 @@ function ChatInput({ onSend, onStop, isStreaming }) {
   const nsPickerRef = useRef(null);
   const resize = useAutoResize(textareaRef, 160);
 
+  // Scroll chat to bottom on input focus (mobile keyboard)
+  useEffect(() => {
+    const input = textareaRef.current;
+    if (!input) return;
+    const scrollToBottom = () => {
+      setTimeout(() => {
+        const messages = document.getElementById('messages');
+        if (messages) messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' });
+      }, 120);
+    };
+    input.addEventListener('focus', scrollToBottom);
+    return () => input.removeEventListener('focus', scrollToBottom);
+  }, []);
+
   const turnCount = useChatStore((s) => s.turnCount);
   const apiOnline = useChatStore((s) => s.apiOnline);
   const namespace = useChatStore((s) => s.namespace);
@@ -70,8 +84,8 @@ function ChatInput({ onSend, onStop, isStreaming }) {
   };
 
   return (
-    <div className="border-t border-white/[0.06] bg-navy-900/70 backdrop-blur-xl safe-bottom flex-shrink-0">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-4 pb-3">
+    <div className="w-full md:relative fixed bottom-0 left-0 right-0 md:bottom-auto md:left-auto md:right-auto bg-navy-900/60 backdrop-blur-md border-t border-white/6 safe-bottom:pb-[env(safe-area-inset-bottom)] z-30">
+      <div className="max-w-4xl mx-auto flex flex-col px-2 sm:px-6 pt-4 pb-3">
         {/* ── Alerts ── */}
         {atMaxTurns && (
           <div className="flex items-center gap-2 mb-3 px-4 py-2.5 rounded-xl bg-mustard-500/[0.08] border border-mustard-500/20 text-mustard-400 text-xs">
@@ -106,10 +120,8 @@ function ChatInput({ onSend, onStop, isStreaming }) {
             placeholder={atMaxTurns ? 'Max turns reached — start a new chat' : 'Ask about your academic programs…'}
             disabled={atMaxTurns}
             rows={1}
-            className="w-full bg-transparent text-sm text-cream font-body
-                       placeholder:text-mist/70
-                       px-5 pt-4 pb-2 resize-none outline-none min-h-[48px] max-h-[160px]
-                       disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full bg-transparent text-sm text-cream font-body placeholder:text-mist/70 px-4 pt-4 pb-2 resize-none outline-none min-h-[48px] max-h-[160px] disabled:opacity-40 disabled:cursor-not-allowed rounded-full"
+            style={{ borderRadius: 9999, boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)' }}
           />
 
           {/* Bottom row inside panel: namespace · char count · SmartRAG pill · Send */}

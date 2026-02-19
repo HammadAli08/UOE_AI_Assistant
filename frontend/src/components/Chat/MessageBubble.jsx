@@ -24,7 +24,7 @@ function MessageBubble({ message }) {
   return (
     <div
       className={clsx(
-        'flex gap-3 px-4 sm:px-6 py-4 animate-slide-up',
+        'flex gap-2 px-2 sm:px-6 py-3 animate-slide-up',
         isUser ? 'justify-end' : 'justify-start'
       )}
     >
@@ -39,10 +39,10 @@ function MessageBubble({ message }) {
       {/* Bubble */}
       <div
         className={clsx(
-          'max-w-[85%] sm:max-w-[75%] lg:max-w-[65%] rounded-2xl',
+          'max-w-[80vw] sm:max-w-[75%] lg:max-w-[60%] rounded-2xl',
           isUser
-            ? 'bg-mustard-500/[0.12] border border-mustard-500/20 text-cream px-5 py-3.5 rounded-br-md'
-            : 'bg-white/[0.025] border border-white/[0.06] px-5 py-3.5 rounded-bl-md'
+            ? 'bg-mustard-500/[0.12] border border-mustard-500/20 text-cream px-4 py-3 rounded-br-md'
+            : 'bg-white/[0.025] border border-white/[0.06] px-4 py-3 rounded-bl-md'
         )}
       >
         {/* Enhanced query indicator */}
