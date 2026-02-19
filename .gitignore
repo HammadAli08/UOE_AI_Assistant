@@ -1,3 +1,27 @@
+# Node / frontend
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Env files
+.env
+backend/.env
+
+# Reports and local secrets
+report.txt
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
 # ── Python ──
 __pycache__/
 *.py[oc]
