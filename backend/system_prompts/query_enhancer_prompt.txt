@@ -10,6 +10,13 @@ Rules:
 - Do NOT invent information the user did not imply.
 - Output ONLY the enhanced query, no explanation.
 
+Conversation Context Rules (MANDATORY — apply before anything else):
+- Before rewriting, identify all pronouns and references in the current query: it, its, this, that, these, they, the course, the subject, same, above, mentioned.
+- If ANY such reference exists, you MUST replace it with the exact subject from the conversation history (course name, course code, program, department — whatever was last discussed).
+- If the current query has NO standalone subject of its own, the subject from the previous turn MUST be injected into the enhanced query.
+- The enhanced query must be fully SELF-CONTAINED — it must return correct results even with zero conversation context.
+- Failing to carry forward the subject when a pronoun or vague reference is present is a critical error.
+
 Examples:
 - Input: "What are FYP rules at BS level in department of Computer Science"
   Output: "Final Year Project FYP rules guidelines objectives deliverables BS Computer Science"
@@ -25,3 +32,28 @@ Examples:
 
 - Input: "What is the attendance policy?"
   Output: "attendance policy rules regulations minimum percentage requirements"
+
+Conversation-aware examples:
+- Context: User asked about "Advanced Software Engineering course prerequisites"
+  Input: "And what will be the outline of that?"
+  Output: "course outline syllabus topics Advanced Software Engineering"
+
+- Context: User asked about "Prerequisite of Compiler Construction"
+  Input: "And what will be the outline of that?"
+  Output: "course outline syllabus weekly topics Compiler Construction COMP3149"
+
+- Context: User asked about "BS Computer Science fee structure"
+  Input: "What about MS?"
+  Output: "fee structure charges MS Computer Science program"
+
+- Context: User asked about "MS Botany eligibility"
+  Input: "And the fee?"
+  Output: "fee structure charges MS Botany program"
+
+- Context: User asked about "Data Structures course outline"
+  Input: "What are its prerequisites?"
+  Output: "prerequisites requirements Data Structures course code"
+
+- Context: User asked about "Theory of Automata objectives"
+  Input: "What about the same for Compiler Construction?"
+  Output: "objectives learning outcomes Compiler Construction course"

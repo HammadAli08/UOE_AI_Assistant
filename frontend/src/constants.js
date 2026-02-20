@@ -29,7 +29,7 @@ export const SUGGESTIONS = {
     'MS Botany ke lie eligibility criteria kya he?',
     'How many credit hours are required for PhD?',
     'Tell me about the research requirements',
-    'What is the admission schedule for MS programs?',
+    'What are the Course Objectives for Advanced Software Engineering?',
   ],
   'rules': [
     'What is the Hostel guest policy?',

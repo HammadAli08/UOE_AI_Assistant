@@ -240,7 +240,7 @@ class RAGPipeline:
 
         if enhance_query:
             t_enhance = time.perf_counter()
-            enhanced_query = self.query_enhancer.enhance(user_query)
+            enhanced_query = self.query_enhancer.enhance(user_query, chat_history=chat_history)
             logger.info("⏱ enhance: %.2fs", time.perf_counter() - t_enhance)
 
         # The retrieval query: use enhanced if available, else raw
@@ -365,7 +365,7 @@ class RAGPipeline:
 
         if enhance_query:
             t_enhance = time.perf_counter()
-            enhanced_query = self.query_enhancer.enhance(user_query)
+            enhanced_query = self.query_enhancer.enhance(user_query, chat_history=chat_history)
             logger.info("⏱ enhance: %.2fs", time.perf_counter() - t_enhance)
 
         # The retrieval query: use enhanced if available, else raw

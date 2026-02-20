@@ -47,7 +47,7 @@ function Navbar() {
             className="w-9 h-9 rounded-lg object-cover"
           />
           <span className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-cream hidden sm:block">
-            UOE AI
+            UOE AI Assistant
           </span>
         </div>
 
