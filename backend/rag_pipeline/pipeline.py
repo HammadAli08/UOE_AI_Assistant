@@ -25,6 +25,7 @@ import logging
 from typing import Dict, List, Optional, Generator as Gen
 
 from langsmith import traceable
+from langsmith.run_helpers import get_current_run_tree
 from .config import (
     NAMESPACE_MAP,
     DEFAULT_TOP_K_RETRIEVE,
@@ -260,11 +261,20 @@ class RAGPipeline:
                 fallback = clarification or get_smart_fallback_message()
                 if session_id:
                     self.memory.add_turn(session_id, user_query, fallback)
+                # Capture run_id even on fallback
+                _run_id = None
+                try:
+                    _rt = get_current_run_tree()
+                    if _rt:
+                        _run_id = str(_rt.id)
+                except Exception:
+                    pass
                 return {
                     "answer": fallback, "sources": [],
                     "enhanced_query": enhanced_query,
                     "namespace": namespace, "session_id": session_id,
                     "smart_info": smart_info,
+                    "run_id": _run_id,
                 }
         else:
             # STANDARD PATH: single retrieval
@@ -281,11 +291,19 @@ class RAGPipeline:
             )
             if session_id:
                 self.memory.add_turn(session_id, user_query, no_result)
+            _run_id = None
+            try:
+                _rt = get_current_run_tree()
+                if _rt:
+                    _run_id = str(_rt.id)
+            except Exception:
+                pass
             return {
                 "answer": no_result, "sources": [],
                 "enhanced_query": enhanced_query,
                 "namespace": namespace, "session_id": session_id,
                 "smart_info": smart_info,
+                "run_id": _run_id,
             }
 
         # ── Use retrieved documents directly (top_k already applied by retriever) ──
@@ -304,6 +322,15 @@ class RAGPipeline:
 
         sources = _extract_sources(final_docs)
 
+        # ── Capture LangSmith run_id for feedback linkage ────────
+        run_id = None
+        try:
+            rt = get_current_run_tree()
+            if rt:
+                run_id = str(rt.id)
+        except Exception:
+            pass
+
         latency_ms = (time.perf_counter() - t_start) * 1000
         logger.info("⏱ TOTAL: %.2fs", latency_ms / 1000)
 
@@ -312,6 +339,7 @@ class RAGPipeline:
             "enhanced_query": enhanced_query,
             "namespace": namespace, "session_id": session_id,
             "smart_info": smart_info,
+            "run_id": run_id,
         }
 
     # ── STREAMING QUERY ──────────────────────────────────────────────
@@ -357,11 +385,19 @@ class RAGPipeline:
                 fallback = clarification or get_smart_fallback_message()
                 if session_id:
                     self.memory.add_turn(session_id, user_query, fallback)
+                _run_id = None
+                try:
+                    _rt = get_current_run_tree()
+                    if _rt:
+                        _run_id = str(_rt.id)
+                except Exception:
+                    pass
                 yield {
                     "type": "metadata", "sources": [],
                     "enhanced_query": enhanced_query,
                     "namespace": namespace, "session_id": session_id,
                     "smart_info": smart_info,
+                    "run_id": _run_id,
                 }
                 yield {"type": "token", "content": fallback}
                 return
@@ -380,11 +416,19 @@ class RAGPipeline:
             )
             if session_id:
                 self.memory.add_turn(session_id, user_query, no_result)
+            _run_id = None
+            try:
+                _rt = get_current_run_tree()
+                if _rt:
+                    _run_id = str(_rt.id)
+            except Exception:
+                pass
             yield {
                 "type": "metadata", "sources": [],
                 "enhanced_query": enhanced_query,
                 "namespace": namespace, "session_id": session_id,
                 "smart_info": smart_info,
+                "run_id": _run_id,
             }
             yield {"type": "token", "content": no_result}
             return
@@ -394,12 +438,22 @@ class RAGPipeline:
 
         sources = _extract_sources(final_docs)
 
+        # ── Capture LangSmith run_id for feedback linkage ────────
+        run_id = None
+        try:
+            rt = get_current_run_tree()
+            if rt:
+                run_id = str(rt.id)
+        except Exception:
+            pass
+
         # ── Emit metadata first ─────────────────────────────────────
         yield {
             "type": "metadata", "sources": sources,
             "enhanced_query": enhanced_query,
             "namespace": namespace, "session_id": session_id,
             "smart_info": smart_info,
+            "run_id": run_id,
         }
 
         # ── Stream tokens ───────────────────────────────────────────

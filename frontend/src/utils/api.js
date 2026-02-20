@@ -141,3 +141,27 @@ export async function chatStreaming({
   }
 }
 
+/**
+ * Submit thumbs-up/down feedback linked to a LangSmith trace.
+ *
+ * @param {{ runId: string, score: 0|1, comment?: string }} params
+ * @returns {Promise<{ status: string }>}
+ */
+export async function submitFeedback({ runId, score, comment }) {
+  const res = await fetch(`${API_BASE}/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      run_id: runId,
+      score,
+      comment: comment || undefined,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Feedback request failed (${res.status})`);
+  }
+
+  return res.json();
+}

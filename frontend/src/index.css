@@ -44,6 +44,7 @@
 
 /* ═══════ Component Layer ═══════ */
 @layer components {
+
   /* ── Typing indicator dots ── */
   .typing-dot {
     @apply w-2 h-2 rounded-full;
@@ -51,9 +52,17 @@
     animation: pulseDot 1.4s infinite ease-in-out both;
   }
 
-  .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-  .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-  .typing-dot:nth-child(3) { animation-delay: 0s; }
+  .typing-dot:nth-child(1) {
+    animation-delay: -0.32s;
+  }
+
+  .typing-dot:nth-child(2) {
+    animation-delay: -0.16s;
+  }
+
+  .typing-dot:nth-child(3) {
+    animation-delay: 0s;
+  }
 
   /* ── Streaming cursor ── */
   .streaming-cursor::after {
@@ -63,20 +72,51 @@
   }
 
   /* ── Message markdown — dark cinematic ── */
-  .message-content h1 { @apply text-lg font-bold mt-4 mb-2 first:mt-0; color: #E8E4DC; }
-  .message-content h2 { @apply text-base font-bold mt-3 mb-2 first:mt-0; color: #E8E4DC; }
-  .message-content h3 { @apply text-sm font-semibold mt-3 mb-1 first:mt-0; color: #E8E4DC; }
-  .message-content p  { @apply mb-2 last:mb-0 leading-relaxed; }
-  .message-content ul { @apply list-disc pl-5 mb-2 space-y-1; }
-  .message-content ol { @apply list-decimal pl-5 mb-2 space-y-1; }
-  .message-content li { @apply leading-relaxed; }
-  .message-content strong { @apply font-semibold; color: #E8E4DC; }
-  .message-content em { @apply italic; }
+  .message-content h1 {
+    @apply text-lg font-bold mt-4 mb-2 first:mt-0;
+    color: #E8E4DC;
+  }
+
+  .message-content h2 {
+    @apply text-base font-bold mt-3 mb-2 first:mt-0;
+    color: #E8E4DC;
+  }
+
+  .message-content h3 {
+    @apply text-sm font-semibold mt-3 mb-1 first:mt-0;
+    color: #E8E4DC;
+  }
+
+  .message-content p {
+    @apply mb-2 last:mb-0 leading-relaxed;
+  }
+
+  .message-content ul {
+    @apply list-disc pl-5 mb-2 space-y-1;
+  }
+
+  .message-content ol {
+    @apply list-decimal pl-5 mb-2 space-y-1;
+  }
+
+  .message-content li {
+    @apply leading-relaxed;
+  }
+
+  .message-content strong {
+    @apply font-semibold;
+    color: #E8E4DC;
+  }
+
+  .message-content em {
+    @apply italic;
+  }
 
   .message-content a {
     color: #D6C85C;
     @apply underline underline-offset-2 transition-colors;
   }
+
   .message-content a:hover {
     color: #F0CC4E;
   }
@@ -172,6 +212,7 @@
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-50%);
   }
@@ -179,3 +220,133 @@
 
 /* Feedback animation */
 
+/* ── Pop: satisfying bounce when clicked ── */
+@keyframes feedbackPop {
+  0% {
+    transform: scale(1);
+  }
+
+  20% {
+    transform: scale(0.75);
+  }
+
+  50% {
+    transform: scale(1.25);
+  }
+
+  75% {
+    transform: scale(0.95);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.feedback-pop {
+  animation: feedbackPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Ripple ring: expanding outline fading out ── */
+@keyframes feedbackRing {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.85);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+.animate-feedback-ring {
+  animation: feedbackRing 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  pointer-events: none;
+}
+
+/* ── Active glow pulse ── */
+.feedback-active {
+  animation: feedbackGlow 2s ease-in-out infinite;
+}
+
+@keyframes feedbackGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  50% {
+    box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.04);
+  }
+}
+
+/* ── Hover lift for feedback buttons ── */
+.feedback-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.feedback-btn:not(:disabled):active {
+  transform: translateY(0) scale(0.92);
+}
+
+/* ── Advanced Animations: Tier 3 Polish ── */
+
+/* 1. Particle Burst (Confetti) */
+@keyframes particleBurst {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(var(--tx), var(--ty)) scale(0);
+    opacity: 0;
+  }
+}
+
+.particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: particleBurst 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* 2. Color Bleed (Message Border Glow) */
+.message-bubble-up {
+  transition: border-color 0.5s ease, box-shadow 0.5s ease;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  /* emerald-500 */
+  box-shadow: 0 4px 20px -5px rgba(16, 185, 129, 0.25);
+}
+
+.message-bubble-down {
+  transition: border-color 0.5s ease, box-shadow 0.5s ease;
+  border-color: rgba(244, 63, 94, 0.4) !important;
+  /* rose-500 */
+  box-shadow: 0 4px 20px -5px rgba(244, 63, 94, 0.25);
+}
+
+/* 3. Staggered Reveal */
+@keyframes staggerIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-in {
+  opacity: 0;
+  /* start hidden */
+  animation: staggerIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}

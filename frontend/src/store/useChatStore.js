@@ -27,6 +27,7 @@ const useChatStore = create((set, get) => ({
   // ── UI State ──
   showChat: false,
   apiOnline: null,      // null = unknown, true/false
+  feedbackMap: {},      // { [messageId]: 'up' | 'down' }
 
   // ── Actions ──
 
@@ -53,6 +54,7 @@ const useChatStore = create((set, get) => ({
       sources: meta.sources || [],
       smartInfo: meta.smartInfo || null,
       enhancedQuery: meta.enhancedQuery || null,
+      runId: meta.runId || null,
     };
     set((s) => ({ messages: [...s.messages, msg] }));
     return msg;
@@ -73,6 +75,7 @@ const useChatStore = create((set, get) => ({
       sources: meta.sources || [],
       smartInfo: meta.smartInfo || null,
       enhancedQuery: meta.enhancedQuery || null,
+      runId: meta.runId || null,
     };
     set((s) => ({
       messages: [...s.messages, msg],
@@ -98,6 +101,11 @@ const useChatStore = create((set, get) => ({
   enterChat: () => set({ showChat: true }),
 
   setApiOnline: (v) => set({ apiOnline: v }),
+
+  setFeedback: (messageId, value) =>
+    set((s) => ({
+      feedbackMap: { ...s.feedbackMap, [messageId]: value },
+    })),
 
   newChat: () => set({
     messages: [],

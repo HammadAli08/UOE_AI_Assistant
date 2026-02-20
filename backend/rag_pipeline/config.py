@@ -110,3 +110,9 @@ QUERY_ENHANCER_TIMEOUT_SECONDS = float(os.getenv("QUERY_ENHANCER_TIMEOUT_SECONDS
 
 # Model used for chunk grading and query rewriting (cheap + fast)
 SMART_RAG_CLASSIFIER_MODEL = "gpt-4o-mini"
+
+# =============================================================================
+# FEEDBACK CONFIGURATION
+# =============================================================================
+
+FEEDBACK_LOG_PATH = Path(__file__).parent.parent / "feedback_log.jsonl"

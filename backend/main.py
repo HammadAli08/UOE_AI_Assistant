@@ -12,15 +12,23 @@ import socket
 import logging
 import subprocess
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from langsmith import Client as LangSmithClient
 
 from rag_pipeline import get_pipeline
-from rag_pipeline.config import DEFAULT_TOP_K_RETRIEVE, LANGSMITH_TRACING_ENABLED, LANGSMITH_PROJECT
+from rag_pipeline.config import (
+    DEFAULT_TOP_K_RETRIEVE,
+    LANGSMITH_TRACING_ENABLED,
+    LANGSMITH_PROJECT,
+    LANGSMITH_API_KEY,
+    FEEDBACK_LOG_PATH,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -105,8 +113,14 @@ class ChatResponse(BaseModel):
     enhanced_query: str
     namespace: str
     session_id: str
+    run_id: Optional[str] = Field(default=None, description="LangSmith trace run ID for feedback linkage")
     smart_info: Optional[dict] = Field(default=None, description="Smart RAG metrics: total_retrievals, query_rewrites, final_relevant_chunks, best_effort, etc.")
- 
+
+
+class FeedbackRequest(BaseModel):
+    run_id: str = Field(..., min_length=1, description="LangSmith run ID to attach feedback to")
+    score: int = Field(..., ge=0, le=1, description="1 for thumbs up, 0 for thumbs down")
+    comment: Optional[str] = Field(default=None, max_length=1000)
 
 
 @app.get("/")
@@ -151,6 +165,7 @@ async def chat(request: ChatRequest):
             enhanced_query=result["enhanced_query"],
             namespace=result["namespace"],
             session_id=session_id,
+            run_id=result.get("run_id"),
             smart_info=result.get("smart_info"),
         )
     except ValueError as e:
@@ -211,8 +226,47 @@ async def get_namespaces():
     }
 
 
+@app.post("/api/feedback")
+async def submit_feedback(request: FeedbackRequest):
+    """Submit thumbs-up/down feedback linked to a LangSmith trace."""
+    try:
+        # ── 1. Send to LangSmith ─────────────────────────────────────
+        if LANGSMITH_TRACING_ENABLED and LANGSMITH_API_KEY:
+            try:
+                ls_client = LangSmithClient()
+                ls_client.create_feedback(
+                    run_id=request.run_id,
+                    key="user-score",
+                    score=request.score,
+                    comment=request.comment,
+                )
+                logger.info(
+                    "Feedback sent to LangSmith: run_id=%s score=%d",
+                    request.run_id, request.score,
+                )
+            except Exception as ls_err:
+                logger.warning("LangSmith feedback failed (saving locally): %s", ls_err)
 
- 
+        # ── 2. Local redundancy log ──────────────────────────────────
+        entry = {
+            "run_id": request.run_id,
+            "score": request.score,
+            "comment": request.comment,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        try:
+            with open(FEEDBACK_LOG_PATH, "a") as f:
+                f.write(json.dumps(entry) + "\n")
+        except Exception as file_err:
+            logger.warning("Local feedback log failed: %s", file_err)
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.error(f"Feedback error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit feedback")
+
+
 
 
 if __name__ == "__main__":

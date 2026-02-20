@@ -55,6 +55,7 @@ export default function useChat() {
             if (meta.sources) metaRef.current.sources = meta.sources;
             if (meta.smart_info) metaRef.current.smartInfo = meta.smart_info;
             if (meta.enhanced_query) metaRef.current.enhancedQuery = meta.enhanced_query;
+            if (meta.run_id) metaRef.current.runId = meta.run_id;
             if (meta.session_id) {
               metaRef.current.sessionId = meta.session_id;
               setSessionId(meta.session_id);
@@ -84,6 +85,7 @@ export default function useChat() {
                 sources: data.sources || [],
                 smartInfo: data.smart_info || null,
                 enhancedQuery: data.enhanced_query || null,
+                runId: data.run_id || null,
               });
             } catch (fallbackErr) {
               if (fallbackErr.name === 'AbortError') return;
