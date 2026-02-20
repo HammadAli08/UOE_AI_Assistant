@@ -106,6 +106,7 @@ class ChatResponse(BaseModel):
     namespace: str
     session_id: str
     smart_info: Optional[dict] = Field(default=None, description="Smart RAG metrics: total_retrievals, query_rewrites, final_relevant_chunks, best_effort, etc.")
+ 
 
 
 @app.get("/")
@@ -208,6 +209,10 @@ async def get_namespaces():
             {"id": "rules", "name": "Rules & Regulations", "description": "University policies and regulations"},
         ]
     }
+
+
+
+ 
 
 
 if __name__ == "__main__":

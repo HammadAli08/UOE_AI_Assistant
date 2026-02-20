@@ -25,7 +25,6 @@ import logging
 from typing import Dict, List, Optional, Generator as Gen
 
 from langsmith import traceable
-
 from .config import (
     NAMESPACE_MAP,
     DEFAULT_TOP_K_RETRIEVE,

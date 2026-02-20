@@ -7,11 +7,14 @@ import remarkGfm from 'remark-gfm';
 import { User, Copy, Check } from 'lucide-react';
 import clsx from 'clsx';
 import SmartBadge from '@/components/SmartRAG/SmartBadge';
+import useChatStore from '@/store/useChatStore';
 
 function MessageBubble({ message }) {
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
   const hasSmartInfo = message.smartInfo != null;
+  const sessionId = useChatStore((s) => s.sessionId);
+  
 
   const handleCopy = async () => {
     try {
@@ -70,6 +73,8 @@ function MessageBubble({ message }) {
             {hasSmartInfo && <SmartBadge smartInfo={message.smartInfo} />}
 
             <div className="flex-1" />
+
+            {/* Copy */}
 
             {/* Copy */}
             <button
