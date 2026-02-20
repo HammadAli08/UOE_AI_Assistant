@@ -80,6 +80,13 @@ function ChatInput({ onSend, onStop, isStreaming }) {
     [resize]
   );
 
+  const currentPlaceholder = atMaxTurns
+    ? 'Max turns reached — start a new chat'
+    : namespace === 'bs-adp' ? 'Ask about BS & ADP courses, fee structure, or durations...'
+      : namespace === 'ms-phd' ? 'Ask about MS & PhD research, admissions, or faculty...'
+        : namespace === 'rules' ? 'Ask about university exams, regulations, and grading...'
+          : 'Ask about your academic programs…';
+
   const toggleSmart = () => {
     updateSettings({ enableSmart: !settings.enableSmart });
   };
@@ -121,7 +128,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            placeholder={atMaxTurns ? 'Max turns reached — start a new chat' : 'Ask about your academic programs…'}
+            placeholder={currentPlaceholder}
             disabled={atMaxTurns}
             rows={1}
             className="w-full bg-transparent text-sm text-cream font-body placeholder:text-mist/70 px-4 pt-4 pb-2 resize-none outline-none min-h-[48px] max-h-[160px] disabled:opacity-40 disabled:cursor-not-allowed"

@@ -58,7 +58,7 @@ function ChatContainer({ onSuggestionClick }) {
         </div>
       </div>
 
-      {/* Bottom gradient fade — positioned as overlay, doesn't affect layout */}
+      {/* Bottom gradient fade — overlay, doesn't affect layout */}
       <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-navy-950 to-transparent pointer-events-none z-10" />
     </div>
   );

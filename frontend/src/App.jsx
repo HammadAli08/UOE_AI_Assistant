@@ -37,17 +37,11 @@ function ChatPage() {
           filter: 'blur(100px)',
         }}
       />
+
       {/* ── Minimal top bar ── */}
       <header className="flex items-center justify-between px-5 sm:px-8 h-14 border-b border-white/[0.06] flex-shrink-0">
-        {/* Left: logo + title — click to go back to landing */}
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-3 group"
-        >
-          <div
-            className="w-8 h-8 rounded-lg overflow-hidden
-                       group-hover:ring-1 group-hover:ring-mustard-500/30 transition-all duration-300"
-          >
+        <button onClick={() => navigate('/')} className="flex items-center gap-3 group">
+          <div className="w-8 h-8 rounded-lg overflow-hidden group-hover:ring-1 group-hover:ring-mustard-500/30 transition-all duration-300">
             <img src="/unnamed.jpg" alt="UOE" className="w-full h-full object-cover rounded-lg" />
           </div>
           <div className="text-left">
@@ -59,7 +53,6 @@ function ChatPage() {
           </div>
         </button>
 
-        {/* Right: new chat */}
         <button
           onClick={() => useChatStore.getState().newChat()}
           className="px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.02]
