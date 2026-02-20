@@ -17,10 +17,33 @@
     @apply min-h-screen;
   }
 
-  /* ── Scrollbar — dark glass ── */
+  /* ── Custom Selection — mustard tint ── */
+  ::selection {
+    background: rgba(200, 185, 74, 0.28);
+    color: #f5f0e1;
+  }
+
+  ::-moz-selection {
+    background: rgba(200, 185, 74, 0.28);
+    color: #f5f0e1;
+  }
+
+  /* ── Noise Texture Overlay — film-grain warmth ── */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    opacity: 0.028;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+
+  /* ── Scrollbar — slim dark glass (4px) ── */
   ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 4px;
+    height: 4px;
   }
 
   ::-webkit-scrollbar-track {
@@ -29,46 +52,48 @@
 
   ::-webkit-scrollbar-thumb {
     @apply rounded-full;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.07);
+    transition: background 0.3s ease;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.16);
   }
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.07) transparent;
   }
 }
 
 /* ═══════ Component Layer ═══════ */
 @layer components {
 
-  /* ── Typing indicator dots ── */
+  /* ── Typing indicator dots — wave pattern ── */
   .typing-dot {
-    @apply w-2 h-2 rounded-full;
+    @apply w-1.5 h-1.5 rounded-full;
     background: #C8B94A;
-    animation: pulseDot 1.4s infinite ease-in-out both;
+    animation: waveDot 1.4s infinite ease-in-out both;
   }
 
   .typing-dot:nth-child(1) {
-    animation-delay: -0.32s;
-  }
-
-  .typing-dot:nth-child(2) {
-    animation-delay: -0.16s;
-  }
-
-  .typing-dot:nth-child(3) {
     animation-delay: 0s;
   }
 
-  /* ── Streaming cursor ── */
+  .typing-dot:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .typing-dot:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  /* ── Streaming cursor — smooth breathing ── */
   .streaming-cursor::after {
-    content: '▌';
-    @apply animate-pulse ml-0.5;
+    content: '▍';
+    @apply ml-0.5;
     color: #C8B94A;
+    animation: breatheCursor 1.2s ease-in-out infinite;
   }
 
   /* ── Message markdown — dark cinematic ── */
@@ -88,7 +113,8 @@
   }
 
   .message-content p {
-    @apply mb-2 last:mb-0 leading-relaxed;
+    @apply mb-2 last:mb-0;
+    line-height: 1.75;
   }
 
   .message-content ul {
@@ -100,7 +126,7 @@
   }
 
   .message-content li {
-    @apply leading-relaxed;
+    line-height: 1.75;
   }
 
   .message-content strong {
@@ -114,7 +140,8 @@
 
   .message-content a {
     color: #D6C85C;
-    @apply underline underline-offset-2 transition-colors;
+    @apply underline underline-offset-2;
+    transition: color 0.3s ease;
   }
 
   .message-content a:hover {
@@ -171,7 +198,21 @@
   }
 
   .relevance-bar-fill {
-    @apply h-full rounded-full transition-all duration-500 ease-out;
+    @apply h-full rounded-full;
+    transition: width 0.5s ease-out;
+  }
+
+  /* ── Source card gradient borders ── */
+  .source-card-green {
+    border-left: 3px solid rgba(34, 197, 94, 0.6);
+  }
+
+  .source-card-yellow {
+    border-left: 3px solid rgba(200, 185, 74, 0.6);
+  }
+
+  .source-card-red {
+    border-left: 3px solid rgba(239, 68, 68, 0.5);
   }
 }
 
@@ -205,9 +246,19 @@
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
+
+  /* Ambient blob utility */
+  .ambient-blob {
+    position: absolute;
+    border-radius: 9999px;
+    pointer-events: none;
+    filter: blur(120px);
+  }
 }
 
-/* ═══════ Marquee Animation (outside Tailwind layers so it's always present) ═══════ */
+/* ═══════ Keyframes (outside layers so always present) ═══════ */
+
+/* Marquee */
 @keyframes marquee {
   0% {
     transform: translateX(0);
@@ -218,9 +269,57 @@
   }
 }
 
-/* Feedback animation */
+/* Wave dot — organic typing indicator */
+@keyframes waveDot {
 
-/* ── Pop: satisfying bounce when clicked ── */
+  0%,
+  80%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.4;
+  }
+
+  40% {
+    transform: translateY(-6px) scale(1.15);
+    opacity: 1;
+  }
+}
+
+/* Breathing cursor */
+@keyframes breatheCursor {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* Input focus glow ring */
+@keyframes glowBreath {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(200, 185, 74, 0.15),
+      0 0 20px -4px rgba(200, 185, 74, 0.08);
+  }
+
+  50% {
+    box-shadow: 0 0 0 1px rgba(200, 185, 74, 0.25),
+      0 0 32px -4px rgba(200, 185, 74, 0.15);
+  }
+}
+
+.input-glow-active {
+  animation: glowBreath 2.5s ease-in-out infinite;
+}
+
+/* ── Feedback animations ── */
+
+/* Pop: satisfying bounce */
 @keyframes feedbackPop {
   0% {
     transform: scale(1);
@@ -247,7 +346,7 @@
   animation: feedbackPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* ── Ripple ring: expanding outline fading out ── */
+/* Ripple ring */
 @keyframes feedbackRing {
   0% {
     opacity: 0.7;
@@ -265,7 +364,7 @@
   pointer-events: none;
 }
 
-/* ── Active glow pulse ── */
+/* Active glow pulse */
 .feedback-active {
   animation: feedbackGlow 2s ease-in-out infinite;
 }
@@ -282,7 +381,7 @@
   }
 }
 
-/* ── Hover lift for feedback buttons ── */
+/* Hover lift for feedback buttons */
 .feedback-btn:not(:disabled):hover {
   transform: translateY(-1px);
 }
@@ -291,9 +390,9 @@
   transform: translateY(0) scale(0.92);
 }
 
-/* ── Advanced Animations: Tier 3 Polish ── */
+/* ── Advanced Animations ── */
 
-/* 1. Particle Burst (Confetti) */
+/* Particle Burst */
 @keyframes particleBurst {
   0% {
     transform: translate(0, 0) scale(1);
@@ -317,22 +416,20 @@
   animation: particleBurst 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
-/* 2. Color Bleed (Message Border Glow) */
+/* Color Bleed */
 .message-bubble-up {
   transition: border-color 0.5s ease, box-shadow 0.5s ease;
   border-color: rgba(16, 185, 129, 0.4) !important;
-  /* emerald-500 */
   box-shadow: 0 4px 20px -5px rgba(16, 185, 129, 0.25);
 }
 
 .message-bubble-down {
   transition: border-color 0.5s ease, box-shadow 0.5s ease;
   border-color: rgba(244, 63, 94, 0.4) !important;
-  /* rose-500 */
   box-shadow: 0 4px 20px -5px rgba(244, 63, 94, 0.25);
 }
 
-/* 3. Staggered Reveal */
+/* Staggered Reveal */
 @keyframes staggerIn {
   from {
     opacity: 0;
@@ -347,6 +444,76 @@
 
 .stagger-in {
   opacity: 0;
-  /* start hidden */
   animation: staggerIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Navbar glow line */
+.nav-glow-line {
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200, 185, 74, 0.4), transparent);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.nav-glow-line.visible {
+  opacity: 1;
+}
+
+/* Footer link hover underline */
+.footer-link {
+  position: relative;
+  display: inline-block;
+}
+
+.footer-link::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: rgba(200, 185, 74, 0.5);
+  transition: width 0.3s ease;
+}
+
+.footer-link:hover::after {
+  width: 100%;
+}
+
+/* Send button arrow rotation */
+@keyframes sendReady {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(-45deg);
+  }
+}
+
+/* Shimmer effect for "Thinking" text */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg,
+      rgba(138, 149, 168, 0.6) 0%,
+      rgba(200, 185, 74, 0.8) 50%,
+      rgba(138, 149, 168, 0.6) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2.5s linear infinite;
 }

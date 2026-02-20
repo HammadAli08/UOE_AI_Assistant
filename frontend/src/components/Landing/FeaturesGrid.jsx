@@ -11,24 +11,28 @@ const features = [
     title: 'Smart RAG',
     desc: 'Self-correcting retrieval that grades, rewrites, and retries up to 6 times — adapting its strategy until it finds the right answer.',
     accent: 'from-mustard-500/20 to-mustard-500/5',
+    iconColor: 'text-mustard-400',
   },
   {
     icon: Layers,
     title: 'Multi-Namespace',
     desc: 'Three curated knowledge bases covering BS/ADP programs, MS/PhD research, and university rules & regulations.',
     accent: 'from-olive-400/20 to-olive-400/5',
+    iconColor: 'text-olive-400',
   },
   {
     icon: Database,
     title: 'Conversation Memory',
     desc: 'Redis-powered session memory retains context across your conversation — no need to repeat yourself.',
     accent: 'from-blue-500/20 to-blue-500/5',
+    iconColor: 'text-blue-400',
   },
   {
     icon: RefreshCw,
     title: 'Accurate Answers',
     desc: 'Every retrieved chunk is graded for relevance and reranked for precision — only the best information reaches you.',
     accent: 'from-purple-500/20 to-purple-500/5',
+    iconColor: 'text-purple-400',
   },
 ];
 
@@ -75,7 +79,7 @@ function FeaturesGrid() {
                               bg-gradient-to-br ${f.accent} border border-white/[0.06]
                               group-hover:scale-105 transition-transform duration-500`}
                 >
-                  <f.icon className="w-5 h-5 text-cream" />
+                  <f.icon className={`w-5 h-5 ${f.iconColor}`} />
                 </div>
 
                 {/* Content */}

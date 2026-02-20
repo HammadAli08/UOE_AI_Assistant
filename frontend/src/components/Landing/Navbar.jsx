@@ -4,6 +4,7 @@
 import { useState, useEffect, memo } from 'react';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import clsx from 'clsx';
 import useChatStore from '@/store/useChatStore';
 
 function Navbar() {
@@ -30,12 +31,13 @@ function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled
-          ? 'bg-navy-950/80 backdrop-blur-2xl border-b border-white/[0.06] shadow-glass'
-          : 'bg-transparent'
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled
+        ? 'bg-navy-950/80 backdrop-blur-2xl border-b border-white/[0.06] shadow-glass'
+        : 'bg-transparent'
+        }`}
     >
+      {/* Glow line */}
+      <div className={clsx('nav-glow-line', scrolled && 'visible')} />
       <div className="max-w-7xl mx-auto px-6 sm:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3">

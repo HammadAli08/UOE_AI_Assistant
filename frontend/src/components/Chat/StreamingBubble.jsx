@@ -4,7 +4,6 @@
 import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-// Logo used as avatar instead of Bot icon
 
 function StreamingBubble({ content }) {
   if (!content) return null;
@@ -17,6 +16,7 @@ function StreamingBubble({ content }) {
       </div>
       <div className="max-w-[85%] sm:max-w-[75%] lg:max-w-[65%]
                       bg-white/[0.025] border border-white/[0.06]
+                      border-l-[3px] border-l-mustard-500/30
                       rounded-2xl rounded-bl-md px-5 py-3.5">
         <div className="message-content text-sm text-cream/85 streaming-cursor">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>

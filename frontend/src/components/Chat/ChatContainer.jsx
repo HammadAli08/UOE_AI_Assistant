@@ -38,8 +38,9 @@ function ChatContainer({ onSuggestionClick }) {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-56px)] md:h-[calc(100vh-64px)]">
-      <div id="messages" className="flex-1 overflow-y-auto px-2 sm:px-4 pb-32 pt-4 space-y-3 overflow-anchor-none">
+    <div className="flex-1 min-h-0 flex flex-col relative">
+      {/* Scrollable message area */}
+      <div id="messages" className="flex-1 overflow-y-auto px-2 sm:px-4 pb-4 pt-4 space-y-3 overflow-anchor-none">
         <div className="max-w-4xl mx-auto">
           {messages.map((msg) => (
             <MessageBubble key={msg.id} message={msg} />
@@ -56,6 +57,9 @@ function ChatContainer({ onSuggestionClick }) {
           <div ref={bottomRef} />
         </div>
       </div>
+
+      {/* Bottom gradient fade — positioned as overlay, doesn't affect layout */}
+      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-navy-950 to-transparent pointer-events-none z-10" />
     </div>
   );
 }

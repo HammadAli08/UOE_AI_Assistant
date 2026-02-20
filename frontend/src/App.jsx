@@ -21,7 +21,22 @@ function ChatPage() {
   );
 
   return (
-    <div className="h-dvh flex flex-col overflow-hidden bg-navy-950">
+    <div className="h-dvh flex flex-col overflow-hidden bg-navy-950 relative">
+      {/* ── Ambient gradient blobs for depth ── */}
+      <div
+        className="absolute top-0 right-0 w-[600px] h-[500px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(200,185,74,0.045) 0%, transparent 70%)',
+          filter: 'blur(100px)',
+        }}
+      />
+      <div
+        className="absolute bottom-0 left-0 w-[500px] h-[400px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(100,120,200,0.035) 0%, transparent 70%)',
+          filter: 'blur(100px)',
+        }}
+      />
       {/* ── Minimal top bar ── */}
       <header className="flex items-center justify-between px-5 sm:px-8 h-14 border-b border-white/[0.06] flex-shrink-0">
         {/* Left: logo + title — click to go back to landing */}

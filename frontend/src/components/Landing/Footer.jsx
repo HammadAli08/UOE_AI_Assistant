@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────
-// Footer — minimal dark footer
+// Footer — minimal dark footer with hover animations
 // ──────────────────────────────────────────
 import { memo } from 'react';
 
@@ -40,7 +40,7 @@ function Footer() {
             </p>
           </div>
 
-          {/* Quick Links */}
+          {/* Quick Links — with hover underline */}
           <div>
             <h4 className="text-2xs font-medium text-mist uppercase tracking-[0.2em] mb-4">Navigation</h4>
             <ul className="space-y-2.5">
@@ -48,7 +48,7 @@ function Footer() {
                 <li key={link.href}>
                   <button
                     onClick={() => scrollTo(link.href)}
-                    className="text-sm text-ash hover:text-cream transition-colors duration-300"
+                    className="footer-link text-sm text-ash hover:text-cream transition-colors duration-300"
                   >
                     {link.label}
                   </button>
@@ -57,14 +57,22 @@ function Footer() {
             </ul>
           </div>
 
-          {/* Technology */}
+          {/* Technology — tag-style */}
           <div>
             <h4 className="text-2xs font-medium text-mist uppercase tracking-[0.2em] mb-4">Technology</h4>
-            <ul className="space-y-2.5">
+            <div className="flex flex-wrap gap-2">
               {techLinks.map((tech) => (
-                <li key={tech} className="text-sm text-ash">{tech}</li>
+                <span
+                  key={tech}
+                  className="inline-block px-3 py-1 rounded-full text-xs text-ash
+                             border border-white/[0.06] bg-white/[0.02]
+                             hover:border-mustard-500/20 hover:text-cream
+                             transition-all duration-300"
+                >
+                  {tech}
+                </span>
               ))}
-            </ul>
+            </div>
           </div>
 
           {/* Info */}

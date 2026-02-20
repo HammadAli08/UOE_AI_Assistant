@@ -12,6 +12,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
   const [value, setValue] = useState('');
   const [showNsPicker, setShowNsPicker] = useState(false);
   const [smartHovered, setSmartHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef(null);
   const nsPickerRef = useRef(null);
   const resize = useAutoResize(textareaRef, 160);
@@ -84,7 +85,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
   };
 
   return (
-    <div className="w-full md:relative fixed bottom-0 left-0 right-0 md:bottom-auto md:left-auto md:right-auto bg-navy-900/60 backdrop-blur-md border-t border-white/6 safe-bottom:pb-[env(safe-area-inset-bottom)] z-30">
+    <div className="w-full flex-shrink-0 md:relative fixed bottom-0 left-0 right-0 md:bottom-auto md:left-auto md:right-auto bg-navy-900/60 backdrop-blur-md border-t border-white/6 safe-bottom:pb-[env(safe-area-inset-bottom)] z-30">
       <div className="max-w-4xl mx-auto flex flex-col px-2 sm:px-6 pt-4 pb-3">
         {/* ── Alerts ── */}
         {atMaxTurns && (
@@ -104,11 +105,12 @@ function ChatInput({ onSend, onStop, isStreaming }) {
         {/* ── Glass input panel ── */}
         <div
           className={clsx(
-            'rounded-2xl border backdrop-blur-sm transition-all duration-400',
-            'bg-white/[0.025]',
+            'rounded-2xl border backdrop-blur-xl transition-all duration-400',
+            'bg-white/[0.03]',
+            isFocused && !overLimit && 'input-glow-active',
             overLimit
               ? 'border-red-500/40'
-              : 'border-white/[0.07] focus-within:border-mustard-500/25 focus-within:shadow-glow-sm'
+              : 'border-white/[0.07] focus-within:border-mustard-500/30'
           )}
         >
           {/* Textarea */}
@@ -117,11 +119,12 @@ function ChatInput({ onSend, onStop, isStreaming }) {
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             placeholder={atMaxTurns ? 'Max turns reached — start a new chat' : 'Ask about your academic programs…'}
             disabled={atMaxTurns}
             rows={1}
-            className="w-full bg-transparent text-sm text-cream font-body placeholder:text-mist/70 px-4 pt-4 pb-2 resize-none outline-none min-h-[48px] max-h-[160px] disabled:opacity-40 disabled:cursor-not-allowed rounded-full"
-            style={{ borderRadius: 9999, boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)' }}
+            className="w-full bg-transparent text-sm text-cream font-body placeholder:text-mist/70 px-4 pt-4 pb-2 resize-none outline-none min-h-[48px] max-h-[160px] disabled:opacity-40 disabled:cursor-not-allowed"
           />
 
           {/* Bottom row inside panel: namespace · char count · SmartRAG pill · Send */}
@@ -273,7 +276,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
                   onClick={handleSubmit}
                   disabled={!canSend}
                   className={clsx(
-                    'w-9 h-9 rounded-full flex items-center justify-center',
+                    'group w-9 h-9 rounded-full flex items-center justify-center',
                     'transition-all duration-400 active:scale-95',
                     canSend
                       ? 'bg-mustard-500 hover:bg-mustard-400 text-navy-950 shadow-glow-sm hover:shadow-glow'
@@ -281,7 +284,10 @@ function ChatInput({ onSend, onStop, isStreaming }) {
                   )}
                   title="Send message"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className={clsx(
+                    'w-4 h-4 transition-transform duration-300',
+                    canSend && 'group-hover:-rotate-45'
+                  )} />
                 </button>
               )}
             </div>
