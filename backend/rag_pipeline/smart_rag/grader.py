@@ -120,12 +120,13 @@ class SmartChunkGrader:
             grades = self._parse_batch_grades(raw, len(chunks))
 
         except Exception as exc:
-            logger.warning("Smart batch grading error: %s", exc)
-            # On failure, accept all chunks with above-threshold confidence
-            # so they pass the 0.6 threshold consistently
+            logger.warning("Smart batch grading error: %s — forcing retry", exc)
+            # On failure, mark all chunks as uncertain to force the retry loop
+            # instead of silently accepting everything (which kills iteration)
             for chunk in chunks:
-                chunk["grade_confidence"] = 0.7
-            return list(chunks), []
+                chunk["grade_confidence"] = 0.0
+                chunk["grade_reason"] = f"Grading failed: {exc}"
+            return [], list(chunks)
 
         # ── Partition into relevant / irrelevant ─────────────────────────
         relevant: List[Dict] = []

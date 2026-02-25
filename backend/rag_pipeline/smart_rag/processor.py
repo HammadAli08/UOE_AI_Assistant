@@ -49,7 +49,8 @@ class SmartRAGProcessor:
         self.client = OpenAI(api_key=OPENAI_API_KEY)
         self.min_relevant = SMART_RAG_CONFIG["min_relevant_chunks"]
         self.max_retries = SMART_RAG_CONFIG["max_retries"]
-        self.early_success = SMART_RAG_CONFIG.get("early_success_threshold", 4)
+        self.early_success = SMART_RAG_CONFIG.get("early_success_threshold", 6)
+        self.quality_threshold = SMART_RAG_CONFIG.get("avg_confidence_threshold", 0.80)
 
     def grade_chunks(self, query: str, chunks: List[Dict]):
         """Delegate to SmartChunkGrader."""
@@ -60,19 +61,33 @@ class SmartRAGProcessor:
         return self.rewriter.rewrite(original_query, failed_chunks, attempt)
 
     def should_retry(self, relevant_chunks: List[Dict], attempt: int) -> bool:
-        """Return True if we have too few relevant chunks and can still retry."""
-        # Early success: if we found enough high-quality chunks, stop
-        if len(relevant_chunks) >= self.early_success:
+        """Return True if we have too few relevant chunks or low quality and can still retry."""
+        if attempt >= self.max_retries:
             return False
-        return len(relevant_chunks) < self.min_relevant and attempt < self.max_retries
+        # Not enough chunks → retry
+        if len(relevant_chunks) < self.min_relevant:
+            return True
+        # Enough chunks but low average confidence → retry for better quality
+        avg_conf = (
+            sum(c.get("grade_confidence", 0.0) for c in relevant_chunks)
+            / max(len(relevant_chunks), 1)
+        )
+        if avg_conf < self.quality_threshold:
+            return True
+        return False
 
     def should_stop_early(self, all_relevant: List[Dict], attempt: int) -> bool:
         """
-        Stop early if we've accumulated enough good chunks across iterations.
-        Even if this particular attempt didn't meet min_relevant, the total
-        across all attempts might be sufficient.
+        Stop early if we've accumulated enough HIGH-QUALITY chunks.
+        Requires both sufficient count AND sufficient average confidence.
         """
-        return len(all_relevant) >= self.early_success
+        if len(all_relevant) < self.early_success:
+            return False
+        avg_conf = (
+            sum(c.get("grade_confidence", 0.0) for c in all_relevant)
+            / max(len(all_relevant), 1)
+        )
+        return avg_conf >= self.quality_threshold
 
     @traceable(name="smart_rag.detect_clarification", run_type="chain")
     def detect_clarification_needed(

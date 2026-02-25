@@ -1,4 +1,4 @@
-You are a query optimization expert for a university document retrieval system (University of Education, Lahore).
+Rewrite the user's query for optimal vector database search against university academic documents (University of Education, Lahore).
 
 Original Query: {original_query}
 Attempt Number: {attempt}
@@ -9,23 +9,33 @@ The following chunks were retrieved but deemed irrelevant:
 Reasons they were irrelevant:
 {failed_reasons}
 
-Task: Rewrite the query to retrieve MORE relevant academic documents. Study what the failed chunks contained and use that context to craft a better query.
-
-Critical rules:
-- ALWAYS expand abbreviations AND keep the original. Example: "FYP" → "Final Year Project FYP"
-- Add synonyms and related terms that likely appear in official university documents.
-- If the failed chunks mention course codes, department names, or specific terms — USE those exact terms in the rewritten query.
-- Do NOT repeat the same query with minor changes. Each attempt must try a meaningfully different angle.
-- Each attempt MUST be substantially different from all previous attempts.
+Rules:
+- ALWAYS expand abbreviations AND keep the original abbreviation. Example: "FYP" → "Final Year Project FYP"
+- Include synonyms and related academic terms that likely appear in official documents. Example: "rules" → also include "guidelines regulations policy objectives deliverables"
+- Keep the rewritten query under 30 words.
+- Extract and preserve key academic terms FROM THE USER'S ORIGINAL QUERY: course codes, program names, semesters, credit hours, department names.
+- Do NOT invent information the user did not state or clearly imply. Do NOT fabricate department names, course codes, batch years, or program names.
+- Do NOT copy department names, course codes, or metadata from the failed chunks into the rewritten query unless the user's original query already mentioned them.
+- Output ONLY the rewritten query, no explanation.
 
 Strategy by attempt:
-- Attempt 1: Expand abbreviations, add related academic terms (e.g., "rules" → "rules guidelines policy objectives deliverables requirements"). Include full program names and department names.
-- Attempt 2: Use terms and course codes found IN the failed chunks to target adjacent content. Add metadata hints — batch year (e.g., "2023 scheme"), semester numbers, program type (e.g., "undergraduate").
-- Attempt 3: Broaden significantly — remove narrow constraints, use general academic vocabulary, try completely alternative phrasings.
-- Attempt 4: Try a completely different angle — focus on the underlying concept rather than the exact question. If asking about a specific course, search for the department/program that offers it. If asking about a rule, search for the regulation category it belongs to.
-- Attempt 5: Cross-reference using terms from ALL previous failed chunks. Combine the most promising metadata (department names, program types, course prefixes) into a targeted query. Try both the specific and general versions of key terms.
-- Attempt 6: Maximum broadening — cast the widest possible net. Use only the core topic words, remove all qualifiers. Try the most generic form of the question that would still match relevant documents. This is the final attempt.
+- Attempt 1: Expand abbreviations from the original query. Add synonyms and related academic vocabulary (e.g., "rules" → "rules guidelines policy requirements").
+- Attempt 2: Try alternative phrasings of the same question. Use different word order or academic terminology that official documents typically use.
+- Attempt 3: Broaden the query — remove narrow qualifiers, use more general academic vocabulary while keeping the core intent.
+- Attempt 4: Focus on the underlying concept rather than the exact phrasing. If asking about a specific course, try the subject area. If asking about a rule, try the regulation category.
+- Attempt 5: Combine the most promising synonyms and alternative phrasings from all previous attempts into one targeted query.
+- Attempt 6: Maximum broadening — use only the core topic words, remove all qualifiers. Try the most generic form of the question. This is the final attempt.
 
-Return ONLY the rewritten query, nothing else. Keep it under 50 words.
+Examples:
+- Original: "What are FYP rules at BS level in department of Computer Science"
+  Rewrite (attempt 1): "Final Year Project FYP rules guidelines objectives deliverables BS Computer Science"
+
+- Original: "What is the attendance policy?"
+  Rewrite (attempt 1): "attendance policy rules regulations minimum percentage requirements"
+  Rewrite (attempt 3): "student attendance requirements academic regulations university policy"
+
+- Original: "How many credit hours does the thesis have in MS?"
+  Rewrite (attempt 1): "thesis research project credit hours MS program requirements"
+  Rewrite (attempt 4): "graduate program thesis dissertation credit hour allocation MS degree"
 
 Rewritten Query:

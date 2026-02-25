@@ -157,17 +157,22 @@ class RAGPipeline:
                 len(all_relevant), current_query[:80],
             )
 
-            # Check if we accumulated enough good chunks across ALL attempts
-            if proc.should_stop_early(all_relevant, attempt):
+            # Per-attempt quality gate: this attempt had enough high-quality chunks?
+            if not proc.should_retry(relevant, attempt):
                 logger.info(
-                    "Smart RAG early exit: %d relevant chunks accumulated "
-                    "(threshold=%d)",
-                    len(all_relevant), proc.early_success,
+                    "Smart RAG: attempt %d passed quality gate "
+                    "(relevant=%d, min=%d) — stopping",
+                    attempt, len(relevant), proc.min_relevant,
                 )
                 break
 
-            # Enough relevant chunks in this attempt? → done
-            if not proc.should_retry(relevant, attempt):
+            # Cross-attempt check: accumulated enough high-quality chunks overall?
+            if proc.should_stop_early(all_relevant, attempt):
+                logger.info(
+                    "Smart RAG early exit: %d relevant chunks accumulated "
+                    "with sufficient quality (threshold=%d)",
+                    len(all_relevant), proc.early_success,
+                )
                 break
 
             # Rewrite for the next attempt

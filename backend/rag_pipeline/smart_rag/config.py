@@ -13,13 +13,14 @@ Features:
 
 SMART_RAG_CONFIG = {
     "max_retries": 6,                # Max re-retrieval attempts after initial try
-    "min_relevant_chunks": 2,        # Minimum relevant chunks needed to skip retries
-    "confidence_threshold": 0.6,     # Minimum confidence score for a chunk to be relevant
+    "min_relevant_chunks": 3,        # Minimum relevant chunks needed to skip retries
+    "confidence_threshold": 0.75,    # Minimum confidence score for a chunk to be relevant
     "grading_model": "gpt-4o-mini",  # Model for grading chunks (cheap + fast)
     "rewriting_model": "gpt-4o-mini",# Model for query rewriting
     "retry_top_k_boost": 4,          # Extra chunks to retrieve on each retry
     "clarification_model": "gpt-4o-mini",  # Model for clarification detection
-    "early_success_threshold": 4,    # If this many relevant chunks found, stop immediately
+    "early_success_threshold": 6,    # If this many relevant chunks found, stop immediately
+    "avg_confidence_threshold": 0.80,# Minimum average confidence for quality gate
 }
 
 NO_RESULTS_MESSAGE = (
