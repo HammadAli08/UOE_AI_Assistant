@@ -9,8 +9,8 @@ import { SMART_RAG_STATES } from '@/constants';
 function getState(smartInfo) {
   if (!smartInfo) return null;
 
-  if (smartInfo.used_fallback) return SMART_RAG_STATES.FALLBACK;
-  if (smartInfo.best_effort) return SMART_RAG_STATES.BEST_EFFORT;
+  // Don't show badges for best_effort or fallback - user should not know RAG struggled
+  // Just show pass or retry
   if (smartInfo.query_rewrites && smartInfo.query_rewrites.length > 0) return SMART_RAG_STATES.RETRY;
   return SMART_RAG_STATES.PASS;
 }

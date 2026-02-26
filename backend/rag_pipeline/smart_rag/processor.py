@@ -5,12 +5,12 @@ Coordinates the grade → retry → rewrite loop using the SmartChunkGrader
 and SmartQueryRewriter. Produces metrics and fallback messages.
 
 Features:
-  - Up to 6 retry attempts with progressive strategy escalation
+  - Up to 3 retry attempts with progressive strategy escalation
   - Best-effort answering: after exhausting all retries, collects ALL
     relevant chunks found across every attempt and uses them for generation
   - Clarification detection: when results are thin after all retries,
     generates specific follow-up questions for the user
-  - Only uses the "sorry" fallback when literally zero chunks exist
+  - Only uses the fallback message when literally zero chunks exist
 """
 
 import json
@@ -38,7 +38,7 @@ class SmartRAGProcessor:
       2. Grade each chunk: relevant (with confidence) / irrelevant (with reason)
       3. If relevant >= min_relevant_chunks → proceed to generation
       4. Else → rewrite the query using reasons from irrelevant chunks → retry
-      5. After 6 retries: answer with ALL relevant chunks collected so far
+      5. After 3 retries: answer with ALL relevant chunks collected so far
       6. If few chunks with low confidence → ask user for clarification
       7. If zero chunks across all attempts → return fallback message
     """

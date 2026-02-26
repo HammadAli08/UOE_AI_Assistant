@@ -2,9 +2,9 @@
 Smart RAG Package — Self-Correcting Retrieval with Best-Effort Answering
 
 Provides:
-  - SmartRAGProcessor: Orchestrates the grade → rewrite → retry loop (6 attempts)
+  - SmartRAGProcessor: Orchestrates the grade → rewrite → retry loop (3 attempts)
   - SmartChunkGrader: Grades chunks with confidence scoring (0.0–1.0)
-  - SmartQueryRewriter: Rewrites failed queries with 6-level strategy escalation
+  - SmartQueryRewriter: Rewrites failed queries with 3-level strategy escalation
   - get_smart_processor(): Singleton factory
   - get_fallback_message(): Graceful fallback text (only when zero chunks exist)
   - SMART_RAG_CONFIG: Configuration constants

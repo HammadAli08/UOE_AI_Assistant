@@ -11,7 +11,7 @@ Smart RAG (when enabled via ``enable_smart=True``):
   4. If not → rewrite query and re-retrieve (up to 6 retries)
   5. Accumulates ALL relevant chunks found across every iteration
   6. Early exit when enough high-quality chunks collected
-  7. After 6 retries → answer with ALL relevant chunks collected (best-effort)
+  7. After 3 retries → answer with ALL relevant chunks collected (best-effort)
   8. If very few chunks → detect if clarification from user would help
   9. Only uses "sorry" fallback when literally zero chunks exist
 
@@ -102,7 +102,7 @@ class RAGPipeline:
         Self-correcting retrieval with best-effort answering:
           attempt 0  → retrieve with enhanced_query, grade chunks
           attempt 1+ → rewrite query, retrieve again, grade again
-          After 6 retries → answer with ALL relevant chunks collected
+          After 3 retries → answer with ALL relevant chunks collected
           If few chunks → check if user should provide more details
           Zero chunks ever → return fallback "sorry" message
 
