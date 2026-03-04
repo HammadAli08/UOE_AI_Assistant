@@ -36,7 +36,11 @@ function ChatContainer({ onSuggestionClick }) {
   }, []);
 
   if (messages.length === 0 && !isStreaming) {
-    return <WelcomeScreen onSuggestionClick={onSuggestionClick} />;
+    return (
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        <WelcomeScreen onSuggestionClick={onSuggestionClick} />
+      </div>
+    );
   }
 
   return (

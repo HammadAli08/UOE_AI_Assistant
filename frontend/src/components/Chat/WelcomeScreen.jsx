@@ -60,7 +60,7 @@ function WelcomeScreen({ onSuggestionClick }) {
   const greeting = useMemo(() => getGreeting(), []);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative">
+    <div className="min-h-full flex flex-col items-center justify-center px-6 py-10 relative">
       {/* Subtle ambient glow */}
       <div
         className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[420px] h-[260px]
