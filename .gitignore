@@ -1,53 +1,160 @@
-# Node / frontend
-node_modules/
-dist/
+# ==========================================
+# 🎓 UOE AI Assistant - Comprehensive .gitignore
+# ==========================================
 
-# Python
+# ── 🐍 Python / Backend ──
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
 .venv/
 venv/
+ENV/
 env/
+.python-version
+uv.lock
 
-# Env files
+# PyCharm
+.idea/
+
+# ── ⚛️ Node.js / Frontend ──
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+.nuxt/
+.vuepress/dist/
+.serverless/
+
+# Environment files
 .env
-backend/.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
 
-# Reports and local secrets
-report.txt
+# ── 🗂️ Logs & Temporary Files ──
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.tmp/
+.temp/
 
-# Editor
+# ── 🔧 Development Tools ──
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+.claude/
 
-# OS
-.DS_Store
-# ── Python ──
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-.venv/
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.nox/
 
-# ── Environment files ──
-.env
-.env.example
-example_.env
-
-# ── Logs ──
-*.log
-
-# ── Data folder ──
+# ── 📊 Data & Secrets ──
 @data/
+*.sqlite
+*.db
+feedback_log.jsonl
+server.log
+firebase-debug.log
 
-# ── Node / Frontend ──
-node_modules/
-frontend/dist/
+# ── 🚀 Deployment & Build ──
+.vercel/
+.netlify/
+.firebase/
+.aws/
+.terraform/
 
-# ── IDE ──
-.idea/
+# ── 🎯 Project Specific ──
+report.txt
+backend/.env
+backend/.env.example
+frontend/.env
+frontend/.env.production
+
+# Lock files (keep package-lock.json for reproducible builds)
+# yarn.lock
+# pnpm-lock.yaml
+
+# ── 📱 Mobile Development (if added later) ──
+*.ipa
+*.apk
+*.aab
+android/
+ios/
+.expo/
+.expo-shared/
+
+# ── 🧪 Testing ──
+coverage/
+*.cover
+.hypothesis/
+.pytest_cache/
+test-results/
+playwright-report/
+test-results/
+
+# ── 📝 Documentation Build ──
+docs/_build/
+site/
+
+# ── 🎨 Design Assets (large files) ──
+*.psd
+*.sketch
+*.fig
+*.ai
+
+# ── 🔄 Version Control ──
+.svn/
+.hg/
+.git/
+*.orig
+*.rej
 .vscode/
 *.swp
 *.swo
