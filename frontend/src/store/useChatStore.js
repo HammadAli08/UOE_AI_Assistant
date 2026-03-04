@@ -31,6 +31,7 @@ const useChatStore = create((set, get) => ({
   // ── UI State ──
   showChat: false,
   sidebarOpen: false,
+  sidebarMinimized: false,
   apiOnline: null,      // null = unknown, true/false
   feedbackMap: {},      // { [messageId]: 'up' | 'down' }
   lastUserQuery: '',    // last user message for retry
@@ -134,6 +135,10 @@ const useChatStore = create((set, get) => ({
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   openSidebar: () => set({ sidebarOpen: true }),
   closeSidebar: () => set({ sidebarOpen: false }),
+  
+  minimizeSidebar: () => set({ sidebarMinimized: true }),
+  expandSidebar: () => set({ sidebarMinimized: false }),
+  toggleSidebarMinimized: () => set((s) => ({ sidebarMinimized: !s.sidebarMinimized })),
 
   setApiOnline: (v) => set({ apiOnline: v }),
 

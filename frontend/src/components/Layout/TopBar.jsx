@@ -1,16 +1,17 @@
 // ──────────────────────────────────────────
-// TopBar — mobile header with menu trigger, namespace badge, status
+// TopBar — mobile header with animated menu trigger
 // ──────────────────────────────────────────
 import { memo } from 'react';
-import { Menu, Wifi, WifiOff, GraduationCap } from 'lucide-react';
+import { Wifi, WifiOff } from 'lucide-react';
 import clsx from 'clsx';
 import useChatStore from '@/store/useChatStore';
 import { NAMESPACES } from '@/constants';
 
 function TopBar() {
   const toggleSidebar = useChatStore((s) => s.toggleSidebar);
-  const namespace = useChatStore((s) => s.namespace);
-  const apiOnline = useChatStore((s) => s.apiOnline);
+  const sidebarOpen   = useChatStore((s) => s.sidebarOpen);
+  const namespace     = useChatStore((s) => s.namespace);
+  const apiOnline     = useChatStore((s) => s.apiOnline);
 
   const currentNs = NAMESPACES.find((n) => n.id === namespace);
 
@@ -18,48 +19,80 @@ function TopBar() {
     <header
       className={clsx(
         'flex items-center justify-between px-4 h-14',
-        'bg-white/90 dark:bg-slate-900/90 backdrop-blur-md',
-        'border-b border-slate-200/80 dark:border-slate-800/80',
-        'shadow-topbar safe-top',
-        'lg:hidden'
+        'bg-navy-900/95 backdrop-blur-xl',
+        'border-b border-white/[0.06]',
+        'safe-top lg:hidden z-40 relative',
       )}
     >
-      {/* Left: Menu */}
+      {/* Left: Animated hamburger → X button */}
       <button
         onClick={toggleSidebar}
-        className="p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800
-                   text-slate-600 dark:text-slate-300 transition-colors"
-        aria-label="Toggle sidebar"
+        aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
+        className={clsx(
+          'relative w-10 h-10 -ml-1.5 rounded-xl flex items-center justify-center',
+          'transition-all duration-300 active:scale-90',
+          sidebarOpen
+            ? 'bg-mustard-500/15 text-mustard-400'
+            : 'text-mist hover:text-cream hover:bg-white/[0.06]',
+        )}
       >
-        <Menu className="w-5 h-5" />
+        {/* Ring glow when open */}
+        {sidebarOpen && (
+          <span className="absolute inset-0 rounded-xl ring-1 ring-mustard-500/40 animate-pulse" />
+        )}
+
+        {/* Animated 3-line ↔ X */}
+        <span className="relative flex flex-col justify-center items-center w-5 h-4 gap-[5px]">
+          {/* Top line */}
+          <span
+            className={clsx(
+              'block h-[1.5px] bg-current rounded-full',
+              'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] origin-center',
+              sidebarOpen ? 'w-5 rotate-45 translate-y-[6.5px]' : 'w-5',
+            )}
+          />
+          {/* Middle line */}
+          <span
+            className={clsx(
+              'block h-[1.5px] bg-current rounded-full',
+              'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+              sidebarOpen ? 'w-0 opacity-0' : 'w-3.5 opacity-100',
+            )}
+          />
+          {/* Bottom line */}
+          <span
+            className={clsx(
+              'block h-[1.5px] bg-current rounded-full',
+              'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] origin-center',
+              sidebarOpen ? 'w-5 -rotate-45 -translate-y-[6.5px]' : 'w-5',
+            )}
+          />
+        </span>
       </button>
 
       {/* Center: Brand + Namespace */}
       <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700
-                        flex items-center justify-center">
-          <GraduationCap className="w-4 h-4 text-white" />
+        <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
+          <img src="/unnamed.jpg" alt="UOE" className="w-full h-full object-cover" />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">
+          <span className="text-sm font-display font-semibold uppercase tracking-[0.08em] text-cream leading-tight">
             UOE AI
           </span>
           {currentNs && (
-            <span className="text-2xs text-slate-500 dark:text-slate-400">
-              {currentNs.label}
-            </span>
+            <span className="text-2xs text-mist">{currentNs.label}</span>
           )}
         </div>
       </div>
 
       {/* Right: API Status */}
-      <div className="p-2 -mr-2">
+      <div className="p-2 -mr-1">
         {apiOnline === true ? (
-          <Wifi className="w-4 h-4 text-green-500" />
+          <Wifi className="w-4 h-4 text-emerald-400" />
         ) : apiOnline === false ? (
-          <WifiOff className="w-4 h-4 text-red-500" />
+          <WifiOff className="w-4 h-4 text-red-400" />
         ) : (
-          <Wifi className="w-4 h-4 text-yellow-500 animate-pulse" />
+          <Wifi className="w-4 h-4 text-mustard-500/60 animate-pulse" />
         )}
       </div>
     </header>

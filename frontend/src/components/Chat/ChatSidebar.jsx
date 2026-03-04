@@ -9,10 +9,11 @@ import {
   LogIn,
   LogOut,
   User,
-  X,
   GraduationCap,
   FlaskConical,
   Scale,
+  ChevronRight,
+  Menu,
 } from 'lucide-react';
 import clsx from 'clsx';
 import useChatStore from '@/store/useChatStore';
@@ -31,7 +32,9 @@ function ChatSidebar() {
   const signOut = useAuthStore((s) => s.signOut);
 
   const sidebarOpen = useChatStore((s) => s.sidebarOpen);
+  const sidebarMinimized = useChatStore((s) => s.sidebarMinimized);
   const closeSidebar = useChatStore((s) => s.closeSidebar);
+  const toggleSidebarMinimized = useChatStore((s) => s.toggleSidebarMinimized);
   const newChat = useChatStore((s) => s.newChat);
   const conversationId = useChatStore((s) => s.conversationId);
   const conversations = useChatStore((s) => s.conversations);
@@ -110,37 +113,89 @@ function ChatSidebar() {
 
       <aside
         className={clsx(
-          'fixed lg:static inset-y-0 left-0 z-50',
-          'w-72 flex flex-col',
+          'fixed lg:static inset-y-0 left-0 z-50 flex flex-col',
           'bg-navy-900/95 backdrop-blur-xl border-r border-white/[0.06]',
-          'transition-transform duration-300 ease-in-out',
-          sidebarOpen
-            ? 'translate-x-0'
-            : '-translate-x-full lg:translate-x-0',
+          'transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]',
+          {
+            // Mobile behavior
+            '-translate-x-full lg:translate-x-0': !sidebarOpen,
+            'translate-x-0': sidebarOpen,
+            // Desktop minimize behavior
+            'lg:w-72': !sidebarMinimized,
+            'lg:w-16': sidebarMinimized,
+            // Mobile always full width when open
+            'w-72': true,
+          },
         )}
       >
+        {/* ── Desktop Minimize Pill ── */}
+        <div className="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 z-10">
+          <button
+            onClick={toggleSidebarMinimized}
+            title={sidebarMinimized ? 'Expand sidebar' : 'Collapse sidebar'}
+            className={clsx(
+              'group relative flex items-center justify-center',
+              'w-8 h-8 rounded-full',
+              'bg-navy-900 border border-white/[0.10]',
+              'text-mist hover:text-cream',
+              'transition-all duration-300',
+              'hover:border-mustard-500/50 hover:bg-navy-800',
+              'hover:shadow-[0_0_12px_2px_rgba(200,185,74,0.18)]',
+              'active:scale-90 shadow-lg',
+            )}
+          >
+            {/* Inner glow ring on hover */}
+            <span className="absolute inset-0 rounded-full ring-1 ring-transparent group-hover:ring-mustard-500/30 transition-all duration-300" />
+
+            {/* Chevron that spins on transition */}
+            <span
+              className={clsx(
+                'transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]',
+                sidebarMinimized ? 'rotate-0' : 'rotate-180',
+              )}
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </span>
+          </button>
+        </div>
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-4 h-14 border-b border-white/[0.06] flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg overflow-hidden">
+          <div className={clsx(
+            'flex items-center gap-2.5 transition-all duration-500',
+            sidebarMinimized && 'lg:justify-center lg:w-full'
+          )}>
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
               <img
                 src="/unnamed.jpg"
                 alt="UOE"
                 className="w-full h-full object-cover"
               />
             </div>
-            <div>
-              <h1 className="font-display text-sm font-semibold uppercase tracking-[0.1em] text-cream leading-tight">
+            <div className={clsx(
+              'transition-all duration-500 overflow-hidden',
+              sidebarMinimized ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'
+            )}>
+              <h1 className="font-display text-sm font-semibold uppercase tracking-[0.1em] text-cream leading-tight whitespace-nowrap">
                 UOE AI
               </h1>
-              <p className="text-2xs text-mist">Chat History</p>
+              <p className="text-2xs text-mist whitespace-nowrap">Chat History</p>
             </div>
           </div>
+          {/* Mobile close button — animated X */}
           <button
             onClick={closeSidebar}
-            className="lg:hidden p-1.5 rounded-lg text-mist hover:text-cream hover:bg-white/[0.06] transition-colors"
+            aria-label="Close sidebar"
+            className={clsx(
+              'lg:hidden relative w-9 h-9 -mr-1 rounded-xl flex items-center justify-center',
+              'text-mist hover:text-cream hover:bg-white/[0.06]',
+              'transition-all duration-300 active:scale-90',
+            )}
           >
-            <X className="w-5 h-5" />
+            <span className="relative flex flex-col justify-center items-center w-5 h-4 gap-[5px]">
+              <span className="block h-[1.5px] w-5 bg-current rounded-full transition-all duration-300 origin-center rotate-45 translate-y-[6.5px]" />
+              <span className="block h-[1.5px] w-0 bg-current rounded-full opacity-0" />
+              <span className="block h-[1.5px] w-5 bg-current rounded-full transition-all duration-300 origin-center -rotate-45 -translate-y-[6.5px]" />
+            </span>
           </button>
         </div>
 
@@ -148,20 +203,66 @@ function ChatSidebar() {
         <div className="px-3 pt-3 flex-shrink-0">
           <button
             onClick={handleNewChat}
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl
-                       border border-white/[0.08] bg-white/[0.03]
-                       text-sm text-cream font-medium
-                       hover:bg-white/[0.06] hover:border-mustard-500/30
-                       transition-all duration-300 active:scale-[0.98]"
+            className={clsx(
+              'w-full flex items-center gap-2 px-3 py-2.5 rounded-xl',
+              'border border-white/[0.08] bg-white/[0.03]',
+              'text-sm text-cream font-medium',
+              'hover:bg-white/[0.06] hover:border-mustard-500/30',
+              'transition-all duration-300 active:scale-[0.98]',
+              sidebarMinimized && 'lg:justify-center'
+            )}
+            title={sidebarMinimized ? 'New Chat' : undefined}
           >
-            <Plus className="w-4 h-4 text-mustard-500" />
-            New Chat
+            <Plus className="w-4 h-4 text-mustard-500 flex-shrink-0" />
+            <span className={clsx(
+              'transition-all duration-500 overflow-hidden whitespace-nowrap',
+              sidebarMinimized ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'
+            )}>
+              New Chat
+            </span>
           </button>
         </div>
 
         {/* ── Conversations ── */}
         <div className="flex-1 overflow-y-auto px-3 pt-3 pb-2 space-y-1">
-          {!user ? (
+          {sidebarMinimized ? (
+            /* Minimized state - show only icons */
+            <div className="hidden lg:flex flex-col items-center gap-2 py-4">
+              {conversations.slice(0, 5).map((convo) => {
+                const Icon = NS_ICONS[convo.namespace] || MessageSquare;
+                return (
+                  <button
+                    key={convo.id}
+                    onClick={() => handleLoadConversation(convo)}
+                    className={clsx(
+                      'w-10 h-10 rounded-lg flex items-center justify-center',
+                      'transition-all duration-200 hover:scale-110',
+                      convo.id === conversationId
+                        ? 'bg-mustard-500/20 text-mustard-400 border border-mustard-500/30'
+                        : 'text-mist hover:text-cream hover:bg-white/[0.06]'
+                    )}
+                    title={convo.title}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </button>
+                );
+              })}
+              {conversations.length > 5 && (
+                <>
+                  <div className="w-6 h-0.5 bg-white/[0.06] rounded-full my-2" />
+                  <button
+                    onClick={expandSidebar}
+                    className="w-10 h-10 rounded-lg flex items-center justify-center
+                               text-mist hover:text-cream hover:bg-white/[0.06]
+                               transition-all duration-200 hover:scale-110"
+                    title={`+${conversations.length - 5} more chats`}
+                  >
+                    <Menu className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          ) : !user ? (
             /* Guest prompt */
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
               <MessageSquare className="w-8 h-8 text-mist/40 mb-3" />
@@ -227,19 +328,28 @@ function ChatSidebar() {
         {/* ── Footer ── */}
         <div className="px-3 pb-3 pt-2 border-t border-white/[0.06] flex-shrink-0">
           {user ? (
-            <div className="flex items-center gap-3 px-2">
+            <div className={clsx(
+              'flex items-center gap-3 px-2 transition-all duration-500',
+              sidebarMinimized && 'lg:justify-center'
+            )}>
               <div className="w-8 h-8 rounded-full bg-mustard-600/20 flex items-center justify-center flex-shrink-0">
                 <User className="w-4 h-4 text-mustard-400" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-cream truncate">
+              <div className={clsx(
+                'flex-1 min-w-0 transition-all duration-500 overflow-hidden',
+                sidebarMinimized ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'
+              )}>
+                <p className="text-xs text-cream truncate whitespace-nowrap">
                   {user.user_metadata?.full_name || user.email}
                 </p>
-                <p className="text-2xs text-mist/60 truncate">{user.email}</p>
+                <p className="text-2xs text-mist/60 truncate whitespace-nowrap">{user.email}</p>
               </div>
               <button
                 onClick={handleSignOut}
-                className="p-1.5 rounded-lg text-mist/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                className={clsx(
+                  'p-1.5 rounded-lg text-mist/60 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200',
+                  sidebarMinimized ? 'lg:hidden' : 'flex-shrink-0'
+                )}
                 title="Sign out"
               >
                 <LogOut className="w-4 h-4" />
@@ -248,12 +358,20 @@ function ChatSidebar() {
           ) : (
             <button
               onClick={openAuthModal}
-              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg
-                         text-xs text-mist hover:text-cream hover:bg-white/[0.04]
-                         transition-colors duration-200"
+              className={clsx(
+                'w-full flex items-center gap-2 px-3 py-2.5 rounded-lg',
+                'text-xs text-mist hover:text-cream hover:bg-white/[0.04]',
+                'transition-all duration-200',
+                sidebarMinimized && 'lg:justify-center'
+              )}
             >
-              <LogIn className="w-4 h-4" />
-              Sign in to save chats
+              <LogIn className="w-4 h-4 flex-shrink-0" />
+              <span className={clsx(
+                'transition-all duration-500 overflow-hidden whitespace-nowrap',
+                sidebarMinimized ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'
+              )}>
+                Sign in to save chats
+              </span>
             </button>
           )}
         </div>
