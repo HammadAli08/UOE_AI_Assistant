@@ -1,8 +1,8 @@
 // ──────────────────────────────────────────
-// TeamSection — cinematic team showcase cards
+// TeamSection — cinematic team showcase cards with 3D tilt
 // ──────────────────────────────────────────
-import { memo } from 'react';
-import { motion } from 'framer-motion';
+import { memo, useRef } from 'react';
+import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { Crown, Server, Code2 } from 'lucide-react';
 import ScrollReveal from './ScrollReveal';
 
@@ -39,14 +39,66 @@ const team = [
   },
 ];
 
-/* ── Hover-aware card with stagger ── */
+// Check for reduced motion preference
+const usePrefersReducedMotion = () => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
+
+// Smooth spring config — gentle, no bounce
+const tiltSpring = { stiffness: 120, damping: 28, mass: 1 };
+
+// 3D Tilt card with smooth mouse-following effect
 function TeamCard({ member, index }) {
+  const cardRef = useRef(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  // Motion values for 3D tilt — reduced range for subtlety
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const rotateX = useTransform(y, [-150, 150], [6, -6]);
+  const rotateY = useTransform(x, [-150, 150], [-6, 6]);
+
+  // Smooth spring with high damping — no wobble
+  const rotateXSmooth = useSpring(rotateX, tiltSpring);
+  const rotateYSmooth = useSpring(rotateY, tiltSpring);
+
+  // Photo parallax — very subtle, opposite to card
+  const photoX = useTransform(x, [-150, 150], [5, -5]);
+  const photoY = useTransform(y, [-150, 150], [5, -5]);
+  const photoXSmooth = useSpring(photoX, tiltSpring);
+  const photoYSmooth = useSpring(photoY, tiltSpring);
+
+  const handleMouseMove = (e) => {
+    if (prefersReducedMotion || !cardRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    x.set(e.clientX - rect.left - centerX);
+    y.set(e.clientY - rect.top - centerY);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
   const Icon = member.icon;
 
   return (
     <ScrollReveal index={index}>
       <motion.div
-        whileHover={{ y: -8, transition: { duration: 0.35, ease: 'easeOut' } }}
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          rotateX: prefersReducedMotion ? 0 : rotateXSmooth,
+          rotateY: prefersReducedMotion ? 0 : rotateYSmooth,
+          transformStyle: 'preserve-3d',
+          perspective: 1000,
+        }}
         className="group relative h-full rounded-2xl border border-white/[0.06] bg-white/[0.015]
                    backdrop-blur-sm overflow-hidden
                    hover:border-mustard-500/25 hover:shadow-glow
@@ -57,14 +109,21 @@ function TeamCard({ member, index }) {
           {/* Gradient overlay on photo */}
           <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/40 to-transparent z-10" />
 
-          <motion.img
-            src={member.photo}
-            alt={member.name}
-            className="w-full h-full object-cover object-top
-                       transition-transform duration-700 ease-out
-                       group-hover:scale-105"
-            loading="lazy"
-          />
+          <motion.div
+            style={{
+              x: prefersReducedMotion ? 0 : photoXSmooth,
+              y: prefersReducedMotion ? 0 : photoYSmooth,
+            }}
+          >
+            <motion.img
+              src={member.photo}
+              alt={member.name}
+              className="w-full h-full object-cover object-top
+                         transition-transform duration-700 ease-out
+                         group-hover:scale-[1.03]"
+              loading="lazy"
+            />
+          </motion.div>
 
           {/* Badge — Group Leader */}
           {member.badge && (
@@ -80,20 +139,20 @@ function TeamCard({ member, index }) {
 
           {/* Floating role icon */}
           <div className="absolute bottom-4 left-5 z-20">
-            <div
+            <motion.div
+              whileHover={{ scale: 1.1 }}
               className={`w-10 h-10 rounded-xl flex items-center justify-center
                          bg-gradient-to-br ${member.accent} bg-opacity-15
-                         border border-white/[0.08] backdrop-blur-md
-                         group-hover:scale-110 transition-transform duration-500`}
+                         border border-white/[0.08] backdrop-blur-md`}
               style={{ background: `linear-gradient(135deg, ${member.glow}, transparent)` }}
             >
               <Icon className="w-5 h-5 text-cream" />
-            </div>
+            </motion.div>
           </div>
         </div>
 
         {/* ── Info area ── */}
-        <div className="relative p-6 pt-5">
+        <div className="relative p-6 pt-5" style={{ transform: 'translateZ(20px)' }}>
           {/* Name */}
           <h3 className="font-display text-lg font-bold uppercase text-cream tracking-wide mb-1
                          group-hover:text-mustard-400 transition-colors duration-500">
@@ -116,10 +175,15 @@ function TeamCard({ member, index }) {
           </p>
         </div>
 
-        {/* ── Hover glow background ── */}
-        <div
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 -z-10 blur-2xl"
-          style={{ background: `radial-gradient(circle at 50% 30%, ${member.glow}, transparent 70%)` }}
+        {/* ── Glow reveal on hover ── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileHover={{ opacity: 1 }}
+          transition={{ duration: 0.7 }}
+          className="absolute inset-0 -z-10 blur-2xl"
+          style={{
+            background: `radial-gradient(circle at 50% 30%, ${member.glow}, transparent 70%)`,
+          }}
         />
       </motion.div>
     </ScrollReveal>

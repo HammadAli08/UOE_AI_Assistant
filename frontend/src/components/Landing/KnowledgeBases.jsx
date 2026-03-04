@@ -1,7 +1,8 @@
 // ──────────────────────────────────────────
-// KnowledgeBases — expanded namespace showcase
+// KnowledgeBases — expanded namespace showcase with smooth hover
 // ──────────────────────────────────────────
-import { memo } from 'react';
+import { memo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useChatStore from '@/store/useChatStore';
@@ -14,15 +15,92 @@ const nsDescriptions = {
   'rules': 'Official university policies — attendance rules, grading systems, examination procedures, and discipline guidelines.',
 };
 
-function KnowledgeBases() {
+// Smooth spring config — gentle lift, no wobble
+const smoothSpring = { type: 'spring', stiffness: 180, damping: 24, mass: 0.8 };
+
+// Namespace card with clean hover lift
+function NamespaceCard({ ns, index }) {
   const navigate = useNavigate();
   const setNamespace = useChatStore((s) => s.setNamespace);
+  const [isHovered, setIsHovered] = useState(false);
 
-  const handleExplore = (nsId) => {
-    setNamespace(nsId);
+  const handleExplore = () => {
+    setNamespace(ns.id);
     navigate('/chat');
   };
 
+  return (
+    <ScrollReveal index={index}>
+      <motion.div
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        animate={{ y: isHovered ? -6 : 0 }}
+        transition={smoothSpring}
+        className="relative h-full"
+      >
+        <div
+          className="group relative h-full p-7 rounded-2xl
+                     border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm
+                     hover:border-mustard-500/20 hover:bg-white/[0.03]
+                     transition-all duration-500 ease-out flex flex-col"
+          style={{
+            boxShadow: isHovered
+              ? '0 16px 48px -12px rgba(0,0,0,0.35), 0 0 24px -4px rgba(200,185,74,0.08)'
+              : '0 4px 16px -4px rgba(0,0,0,0.15)',
+            transition: 'box-shadow 0.5s ease, border-color 0.5s ease, background 0.5s ease',
+          }}
+        >
+          {/* Icon & title with subtle scale */}
+          <div className="flex items-center gap-4 mb-4">
+            <motion.div
+              animate={{ scale: isHovered ? 1.1 : 1 }}
+              transition={smoothSpring}
+              className="w-10 h-10 rounded-lg flex items-center justify-center
+                         bg-mustard-500/10 border border-white/[0.06]"
+            >
+              {(() => { const Icon = ns.icon; return <Icon className="w-5 h-5 text-mustard-400" />; })()}
+            </motion.div>
+            <h3 className="font-display text-lg font-semibold uppercase text-cream tracking-wide">
+              {ns.label}
+            </h3>
+          </div>
+
+          {/* Description */}
+          <p className="text-sm text-ash leading-relaxed mb-5">
+            {nsDescriptions[ns.id]}
+          </p>
+
+          {/* Sample questions */}
+          <div className="flex-1 mb-6">
+            <p className="text-2xs text-mist uppercase tracking-[0.2em] mb-3">Popular Questions</p>
+            <ul className="space-y-2">
+              {(SUGGESTIONS[ns.id] || []).slice(0, 3).map((q) => (
+                <li key={q} className="text-xs text-ash/70 leading-relaxed pl-3 border-l border-white/[0.06]">
+                  {q}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={handleExplore}
+            className="group/btn inline-flex items-center gap-2 text-sm font-medium text-mustard-500
+                       hover:text-mustard-400 transition-colors duration-300"
+          >
+            <span>Explore {ns.label.split(' ')[0]}</span>
+            <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover/btn:translate-x-1" />
+          </button>
+
+          {/* Hover glow */}
+          <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-mustard-500/[0.02] -z-10 blur-xl" />
+        </div>
+      </motion.div>
+    </ScrollReveal>
+  );
+}
+
+function KnowledgeBases() {
   return (
     <section id="knowledge-bases" className="relative py-28 sm:py-36">
       {/* Background */}
@@ -50,52 +128,7 @@ function KnowledgeBases() {
         {/* Namespace cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
           {NAMESPACES.map((ns, i) => (
-            <ScrollReveal key={ns.id} index={i}>
-              <div
-                className="group relative h-full p-7 rounded-2xl
-                           border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm
-                           hover:border-mustard-500/20 hover:bg-white/[0.03]
-                           transition-all duration-600 flex flex-col"
-              >
-                {/* Icon & title */}
-                <div className="flex items-center gap-4 mb-4">
-                  <span className="text-3xl">{ns.icon}</span>
-                  <h3 className="font-display text-lg font-semibold uppercase text-cream tracking-wide">
-                    {ns.label}
-                  </h3>
-                </div>
-
-                {/* Description */}
-                <p className="text-sm text-ash leading-relaxed mb-5">
-                  {nsDescriptions[ns.id]}
-                </p>
-
-                {/* Sample questions */}
-                <div className="flex-1 mb-6">
-                  <p className="text-2xs text-mist uppercase tracking-[0.2em] mb-3">Popular Questions</p>
-                  <ul className="space-y-2">
-                    {(SUGGESTIONS[ns.id] || []).slice(0, 3).map((q) => (
-                      <li key={q} className="text-xs text-ash/70 leading-relaxed pl-3 border-l border-white/[0.06]">
-                        {q}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* CTA */}
-                <button
-                  onClick={() => handleExplore(ns.id)}
-                  className="group/btn inline-flex items-center gap-2 text-sm font-medium text-mustard-500
-                             hover:text-mustard-400 transition-colors duration-300"
-                >
-                  <span>Explore {ns.label.split(' ')[0]}</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover/btn:translate-x-1" />
-                </button>
-
-                {/* Hover glow */}
-                <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-mustard-500/[0.02] -z-10 blur-xl" />
-              </div>
-            </ScrollReveal>
+            <NamespaceCard key={ns.id} ns={ns} index={i} />
           ))}
         </div>
       </div>

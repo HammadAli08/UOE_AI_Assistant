@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────
-// CTABanner — full-width closing call-to-action
+// CTABanner — ambient gradient + GPU-accelerated CTA hover
 // ──────────────────────────────────────────
 import { memo } from 'react';
 import { ArrowRight } from 'lucide-react';
@@ -13,6 +13,16 @@ function CTABanner() {
     <section className="relative py-24 sm:py-32 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-navy-950" />
+
+      {/* Ambient gradient shift */}
+      <div
+        className="absolute inset-0 opacity-60 ambient-gradient"
+        style={{
+          background: 'linear-gradient(135deg, rgba(200,185,74,0.04) 0%, rgba(100,120,200,0.03) 25%, rgba(140,147,64,0.04) 50%, rgba(200,185,74,0.03) 75%, rgba(100,120,200,0.04) 100%)',
+          backgroundSize: '300% 300%',
+        }}
+      />
+
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[500px]
                    rounded-full blur-[180px] opacity-70"
@@ -40,12 +50,13 @@ function CTABanner() {
             onClick={() => navigate('/chat')}
             className="group relative inline-flex items-center gap-3 px-10 py-4 rounded-full
                        bg-mustard-500 text-navy-950 font-semibold text-sm uppercase tracking-[0.18em]
-                       hover:bg-mustard-400 hover:shadow-glow
-                       transition-all duration-500 ease-out active:scale-[0.97]"
+                       transition-[transform,box-shadow] duration-300 ease-out
+                       hover:scale-105 hover:shadow-[0_8px_30px_rgba(200,185,74,0.3)]
+                       active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-mustard-400"
+            style={{ willChange: 'transform' }}
           >
             <span>Start a Conversation</span>
             <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-            <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl bg-mustard-400/25 -z-10" />
           </button>
         </motion.div>
       </div>

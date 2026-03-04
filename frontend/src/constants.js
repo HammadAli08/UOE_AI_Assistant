@@ -1,6 +1,7 @@
 // ──────────────────────────────────────────
 // Application-wide constants
 // ──────────────────────────────────────────
+import { GraduationCap, FlaskConical, Scale } from 'lucide-react';
 
 // In production (Vercel) VITE_API_URL points to the Render backend.
 // In local dev the Vite proxy forwards /api → localhost:8000.
@@ -11,9 +12,9 @@ export const API_BASE = import.meta.env.VITE_API_URL || '/api';
 export const BACKEND_BASE = API_BASE.replace(/\/api$/, '');
 
 export const NAMESPACES = [
-  { id: 'bs-adp', label: 'BS / ADP Programs', icon: '🎓', color: 'brand' },
-  { id: 'ms-phd', label: 'MS / PhD Programs', icon: '🔬', color: 'indigo' },
-  { id: 'rules',  label: 'Rules & Regulations', icon: '📋', color: 'amber' },
+  { id: 'bs-adp', label: 'BS / ADP Programs', icon: GraduationCap, color: 'brand' },
+  { id: 'ms-phd', label: 'MS / PhD Programs', icon: FlaskConical, color: 'indigo' },
+  { id: 'rules',  label: 'Rules & Regulations', icon: Scale, color: 'amber' },
 ];
 
 export const DEFAULT_NAMESPACE = 'bs-adp';

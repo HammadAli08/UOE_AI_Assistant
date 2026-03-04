@@ -1,7 +1,8 @@
 // ──────────────────────────────────────────
-// TechMarquee — infinite scrolling tech badges
+// TechMarquee — smooth infinite scrolling tech badges
+// Pure CSS animation for buttery-smooth 60fps
 // ──────────────────────────────────────────
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import ScrollReveal from './ScrollReveal';
 
 const techBadges = [
@@ -19,9 +20,9 @@ function Badge({ name, desc }) {
   return (
     <div
       className="flex items-center gap-3 px-5 py-2.5 rounded-full shrink-0
-                 border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm
-                 hover:border-mustard-500/15 hover:bg-white/[0.04]
-                 transition-all duration-500 whitespace-nowrap"
+                 border border-white/[0.06] bg-white/[0.02]
+                 hover:border-mustard-500/20 hover:bg-white/[0.05]
+                 transition-all duration-500 ease-out whitespace-nowrap select-none"
     >
       <span className="text-sm font-semibold text-cream tracking-wide">{name}</span>
       <span className="text-2xs text-mist">{desc}</span>
@@ -29,23 +30,30 @@ function Badge({ name, desc }) {
   );
 }
 
-function MarqueeRow({ reverse = false }) {
+// Smooth CSS-only marquee row
+function MarqueeRow({ reverse = false, duration = 40 }) {
+  const [paused, setPaused] = useState(false);
+
   return (
-    <div className="relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+    <div
+      className="relative overflow-hidden
+                 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
       <div
         className="flex gap-4 w-max"
         style={{
-          animation: `marquee 35s linear infinite ${reverse ? 'reverse' : ''}`,
+          animation: `marquee ${duration}s linear infinite${reverse ? ' reverse' : ''}`,
+          animationPlayState: paused ? 'paused' : 'running',
         }}
       >
-        {/* First set */}
-        {techBadges.map((b) => (
-          <Badge key={`a-${b.name}`} name={b.name} desc={b.desc} />
-        ))}
-        {/* Duplicate for seamless loop */}
-        {techBadges.map((b) => (
-          <Badge key={`b-${b.name}`} name={b.name} desc={b.desc} />
-        ))}
+        {/* Triple set for seamless wrap at all widths */}
+        {[0, 1, 2].map((set) =>
+          techBadges.map((b) => (
+            <Badge key={`${set}-${b.name}`} name={b.name} desc={b.desc} />
+          ))
+        )}
       </div>
     </div>
   );
@@ -69,8 +77,8 @@ function TechMarquee() {
         </ScrollReveal>
 
         <div className="space-y-4">
-          <MarqueeRow />
-          <MarqueeRow reverse />
+          <MarqueeRow duration={45} />
+          <MarqueeRow reverse duration={50} />
         </div>
       </div>
     </section>

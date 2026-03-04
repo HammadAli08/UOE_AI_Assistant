@@ -3,7 +3,9 @@
 // ──────────────────────────────────────────
 import { useCallback, useRef } from 'react';
 import useChatStore from '@/store/useChatStore';
+import useAuthStore from '@/store/useAuthStore';
 import { chatStreaming, chatNonStreaming } from '@/utils/api';
+import { createConversation, saveMessage, fetchConversations } from '@/lib/chatPersistence';
 
 export default function useChat() {
   const abortRef = useRef(null);
@@ -12,6 +14,7 @@ export default function useChat() {
   const {
     namespace,
     sessionId,
+    conversationId,
     settings,
     isStreaming,
     addUserMessage,
@@ -21,6 +24,8 @@ export default function useChat() {
     finishStreaming,
     cancelStreaming,
     setSessionId,
+    setConversationId,
+    setConversations,
     isMaxTurns,
   } = useChatStore();
 
@@ -36,6 +41,30 @@ export default function useChat() {
       abortRef.current?.abort();
       abortRef.current = new AbortController();
       metaRef.current = {};
+
+      // ═══ Supabase: ensure conversation exists & save user message ═══
+      const user = useAuthStore.getState().user;
+      let convId = conversationId;
+
+      if (user && !convId) {
+        try {
+          const title = query.trim().length > 50
+            ? query.trim().slice(0, 50) + '…'
+            : query.trim();
+          const conv = await createConversation(user.id, namespace, title);
+          if (conv) {
+            convId = conv.id;
+            setConversationId(conv.id);
+            fetchConversations(user.id).then(setConversations).catch(() => {});
+          }
+        } catch (err) {
+          console.warn('[Persist] Failed to create conversation:', err);
+        }
+      }
+
+      if (user && convId) {
+        saveMessage(convId, { role: 'user', content: query.trim() }).catch(() => {});
+      }
 
       startStreaming();
 
@@ -63,7 +92,21 @@ export default function useChat() {
           },
 
           onDone: () => {
+            // Capture content before finishStreaming clears it
+            const finalContent = useChatStore.getState().streamingContent;
             finishStreaming(metaRef.current);
+
+            // ═══ Persist assistant message ═══
+            if (user && convId) {
+              saveMessage(convId, {
+                role: 'assistant',
+                content: finalContent,
+                sources: metaRef.current.sources,
+                smartInfo: metaRef.current.smartInfo,
+                enhancedQuery: metaRef.current.enhancedQuery,
+                runId: metaRef.current.runId,
+              }).catch(() => {});
+            }
           },
 
           onError: async (err) => {
@@ -87,6 +130,18 @@ export default function useChat() {
                 enhancedQuery: data.enhanced_query || null,
                 runId: data.run_id || null,
               });
+
+              // ═══ Persist fallback assistant message ═══
+              if (user && convId) {
+                saveMessage(convId, {
+                  role: 'assistant',
+                  content: data.answer,
+                  sources: data.sources,
+                  smartInfo: data.smart_info,
+                  enhancedQuery: data.enhanced_query,
+                  runId: data.run_id,
+                }).catch(() => {});
+              }
             } catch (fallbackErr) {
               if (fallbackErr.name === 'AbortError') return;
               addAssistantMessage(
@@ -109,6 +164,7 @@ export default function useChat() {
     [
       namespace,
       sessionId,
+      conversationId,
       settings,
       isStreaming,
       addUserMessage,
@@ -118,6 +174,8 @@ export default function useChat() {
       finishStreaming,
       cancelStreaming,
       setSessionId,
+      setConversationId,
+      setConversations,
       isMaxTurns,
     ]
   );

@@ -12,7 +12,11 @@ const useChatStore = create((set, get) => ({
 
   // ── Session ──
   sessionId: null,
+  conversationId: null,
   turnCount: 0,
+
+  // ── Conversation History ──
+  conversations: [],
 
   // ── Namespace ──
   namespace: DEFAULT_NAMESPACE,
@@ -26,8 +30,11 @@ const useChatStore = create((set, get) => ({
 
   // ── UI State ──
   showChat: false,
+  sidebarOpen: false,
   apiOnline: null,      // null = unknown, true/false
   feedbackMap: {},      // { [messageId]: 'up' | 'down' }
+  lastUserQuery: '',    // last user message for retry
+  draftInput: '',       // pre-filled input text (e.g. from retry)
 
   // ── Actions ──
 
@@ -41,6 +48,7 @@ const useChatStore = create((set, get) => ({
     set((s) => ({
       messages: [...s.messages, msg],
       turnCount: s.turnCount + 1,
+      lastUserQuery: content,
     }));
     return msg;
   },
@@ -88,10 +96,33 @@ const useChatStore = create((set, get) => ({
 
   setSessionId: (id) => set({ sessionId: id }),
 
+  setConversationId: (id) => set({ conversationId: id }),
+  setConversations: (convos) => set({ conversations: convos }),
+
+  loadConversation: (convo, messages) => set({
+    conversationId: convo.id,
+    namespace: convo.namespace,
+    messages: messages.map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      timestamp: m.created_at,
+      sources: m.sources || [],
+      smartInfo: m.smart_info || null,
+      enhancedQuery: m.enhanced_query || null,
+      runId: m.run_id || null,
+    })),
+    turnCount: messages.filter((m) => m.role === 'user').length,
+    sessionId: null,
+    isStreaming: false,
+    streamingContent: '',
+  }),
+
   setNamespace: (ns) => set({
     namespace: ns,
     messages: [],
     sessionId: null,
+    conversationId: null,
     turnCount: 0,
   }),
 
@@ -100,6 +131,10 @@ const useChatStore = create((set, get) => ({
 
   enterChat: () => set({ showChat: true }),
 
+  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  openSidebar: () => set({ sidebarOpen: true }),
+  closeSidebar: () => set({ sidebarOpen: false }),
+
   setApiOnline: (v) => set({ apiOnline: v }),
 
   setFeedback: (messageId, value) =>
@@ -107,9 +142,12 @@ const useChatStore = create((set, get) => ({
       feedbackMap: { ...s.feedbackMap, [messageId]: value },
     })),
 
+  setDraftInput: (v) => set({ draftInput: v }),
+
   newChat: () => set({
     messages: [],
     sessionId: null,
+    conversationId: null,
     turnCount: 0,
     isStreaming: false,
     streamingContent: '',

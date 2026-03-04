@@ -1,10 +1,11 @@
 // ──────────────────────────────────────────
-// MessageBubble — dark cinematic message bubble with feedback
-// ──────────────────────────────────────────
+// MessageBubble — dark futurism message bubble with feedback
+// ─────────────────────────────────────────-
 import { memo, useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { User, Copy, Check, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Copy, Check, ThumbsUp, ThumbsDown, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
 import SmartBadge from '@/components/SmartRAG/SmartBadge';
 import useChatStore from '@/store/useChatStore';
@@ -17,8 +18,13 @@ function MessageBubble({ message }) {
   const [feedbackBurst, setFeedbackBurst] = useState(null); // 'up' | 'down' | null
   const hasSmartInfo = message.smartInfo != null;
 
+  // Detect if this is an error message
+  const isErrorMessage = !isUser && message.content.includes('Sorry, I encountered an error');
+
   const feedback = useChatStore((s) => s.feedbackMap[message.id]);
   const setFeedback = useChatStore((s) => s.setFeedback);
+  const lastUserQuery = useChatStore((s) => s.lastUserQuery);
+  const setDraftInput = useChatStore((s) => s.setDraftInput);
 
   const handleCopy = async () => {
     try {
@@ -27,6 +33,12 @@ function MessageBubble({ message }) {
       setTimeout(() => setCopied(false), 2000);
     } catch { /* ignore */ }
   };
+
+  // Handle retry — populate the chat input with the last query
+  const handleRetry = useCallback(() => {
+    if (!lastUserQuery) return;
+    setDraftInput(lastUserQuery);
+  }, [lastUserQuery, setDraftInput]);
 
   const handleFeedback = useCallback(async (type) => {
     if (feedbackLoading) return;
@@ -57,7 +69,7 @@ function MessageBubble({ message }) {
     }
   }, [feedback, feedbackLoading, message.id, message.runId, setFeedback]);
 
-  // Generate 6 particles for the burst effect
+  // Generate 8 particles for the burst effect
   const renderParticles = (type) => {
     if (feedbackBurst !== type) return null;
     const colorClass = type === 'up' ? 'bg-emerald-400' : 'bg-rose-400';
@@ -66,19 +78,23 @@ function MessageBubble({ message }) {
       const tx = Math.cos(angle) * 24; // Distance
       const ty = Math.sin(angle) * 24;
       return (
-        <span
+        <motion.span
           key={i}
+          initial={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+          animate={{ opacity: 0, scale: 0, x: tx, y: ty }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
           className={clsx('particle', colorClass)}
-          style={{ '--tx': `${tx}px`, '--ty': `${ty}px` }}
         />
       );
     });
   };
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       className={clsx(
-        'flex gap-2 px-2 sm:px-6 py-3 animate-slide-up',
+        'flex gap-2 px-2 sm:px-6 py-3',
         isUser ? 'justify-end' : 'justify-start'
       )}
     >
@@ -91,7 +107,8 @@ function MessageBubble({ message }) {
       )}
 
       {/* Bubble */}
-      <div
+      <motion.div
+        layout
         className={clsx(
           'max-w-[80vw] sm:max-w-[75%] lg:max-w-[60%] rounded-2xl relative transition-all duration-500',
           isUser
@@ -102,13 +119,6 @@ function MessageBubble({ message }) {
           !isUser && feedback === 'down' && 'message-bubble-down'
         )}
       >
-        {/* Enhanced query indicator */}
-        {!isUser && message.enhancedQuery && (
-          <p className="text-2xs text-mist mb-2 italic">
-            🔍 Enhanced: &ldquo;{message.enhancedQuery}&rdquo;
-          </p>
-        )}
-
         {/* Content */}
         {isUser ? (
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
@@ -126,70 +136,108 @@ function MessageBubble({ message }) {
             {/* Smart RAG badge */}
             {hasSmartInfo && <SmartBadge smartInfo={message.smartInfo} />}
 
+            {/* Retry button for error messages */}
+            {isErrorMessage && (
+              <button
+                onClick={handleRetry}
+                disabled={!lastUserQuery}
+                className={clsx(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
+                  'bg-mustard-500/15 text-mustard-400 hover:bg-mustard-500/25'
+                )}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Retry</span>
+              </button>
+            )}
+
             <div className="flex-1" />
 
-            {/* ── Feedback buttons (Staggered Reveal) ── */}
-            <div className="flex items-center gap-1 stagger-in" style={{ animationDelay: '200ms' }}>
-              <button
-                onClick={() => handleFeedback('up')}
-                disabled={feedbackLoading}
-                className={clsx(
-                  'feedback-btn group relative p-1.5 rounded-lg transition-all duration-300',
-                  feedback === 'up'
-                    ? 'bg-emerald-500/15 text-emerald-400 feedback-active'
-                    : 'text-mist/50 hover:text-emerald-400 hover:bg-emerald-500/[0.08]',
-                  feedbackLoading && 'opacity-50 cursor-not-allowed',
-                )}
-                title="Helpful answer"
-              >
-                <ThumbsUp
+            {/* ── Feedback buttons ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center gap-1"
+            >
+              <div className="relative">
+                <button
+                  onClick={() => handleFeedback('up')}
+                  disabled={feedbackLoading}
                   className={clsx(
-                    'w-3.5 h-3.5 transition-transform duration-300',
-                    feedback === 'up' && 'feedback-pop',
+                    'feedback-btn group relative p-1.5 rounded-lg transition-all duration-300',
+                    feedback === 'up'
+                      ? 'bg-emerald-500/15 text-emerald-400 feedback-active'
+                      : 'text-mist/50 hover:text-emerald-400 hover:bg-emerald-500/[0.08]',
+                    feedbackLoading && 'opacity-50 cursor-not-allowed',
                   )}
-                  fill={feedback === 'up' ? 'currentColor' : 'none'}
-                  strokeWidth={feedback === 'up' ? 0 : 2}
-                />
-                {/* Particles */}
-                {renderParticles('up')}
+                  title="Helpful answer"
+                >
+                  <ThumbsUp
+                    className={clsx(
+                      'w-3.5 h-3.5 transition-transform duration-300',
+                      feedback === 'up' && 'feedback-pop',
+                    )}
+                    fill={feedback === 'up' ? 'currentColor' : 'none'}
+                    strokeWidth={feedback === 'up' ? 0 : 2}
+                  />
+                  {/* Particles */}
+                  {renderParticles('up')}
 
-                {/* Ripple ring on active */}
-                {feedback === 'up' && (
-                  <span className="absolute inset-0 rounded-lg animate-feedback-ring
-                                   border border-emerald-400/40" />
-                )}
-              </button>
+                  {/* Ripple ring on active */}
+                  <AnimatePresence>
+                    {feedback === 'up' && (
+                      <motion.span
+                        initial={{ opacity: 0.7, scale: 0.85 }}
+                        animate={{ opacity: 0, scale: 1.6 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6 }}
+                        className="absolute inset-0 rounded-lg border border-emerald-400/40"
+                      />
+                    )}
+                  </AnimatePresence>
+                </button>
+              </div>
 
-              <button
-                onClick={() => handleFeedback('down')}
-                disabled={feedbackLoading}
-                className={clsx(
-                  'feedback-btn group relative p-1.5 rounded-lg transition-all duration-300',
-                  feedback === 'down'
-                    ? 'bg-rose-500/15 text-rose-400 feedback-active'
-                    : 'text-mist/50 hover:text-rose-400 hover:bg-rose-500/[0.08]',
-                  feedbackLoading && 'opacity-50 cursor-not-allowed',
-                )}
-                title="Unhelpful answer"
-              >
-                <ThumbsDown
+              <div className="relative">
+                <button
+                  onClick={() => handleFeedback('down')}
+                  disabled={feedbackLoading}
                   className={clsx(
-                    'w-3.5 h-3.5 transition-transform duration-300',
-                    feedback === 'down' && 'feedback-pop',
+                    'feedback-btn group relative p-1.5 rounded-lg transition-all duration-300',
+                    feedback === 'down'
+                      ? 'bg-rose-500/15 text-rose-400 feedback-active'
+                      : 'text-mist/50 hover:text-rose-400 hover:bg-rose-500/[0.08]',
+                    feedbackLoading && 'opacity-50 cursor-not-allowed',
                   )}
-                  fill={feedback === 'down' ? 'currentColor' : 'none'}
-                  strokeWidth={feedback === 'down' ? 0 : 2}
-                />
-                {/* Particles */}
-                {renderParticles('down')}
+                  title="Unhelpful answer"
+                >
+                  <ThumbsDown
+                    className={clsx(
+                      'w-3.5 h-3.5 transition-transform duration-300',
+                      feedback === 'down' && 'feedback-pop',
+                    )}
+                    fill={feedback === 'down' ? 'currentColor' : 'none'}
+                    strokeWidth={feedback === 'down' ? 0 : 2}
+                  />
+                  {/* Particles */}
+                  {renderParticles('down')}
 
-                {/* Ripple ring on active */}
-                {feedback === 'down' && (
-                  <span className="absolute inset-0 rounded-lg animate-feedback-ring
-                                   border border-rose-400/40" />
-                )}
-              </button>
-            </div>
+                  {/* Ripple ring on active */}
+                  <AnimatePresence>
+                    {feedback === 'down' && (
+                      <motion.span
+                        initial={{ opacity: 0.7, scale: 0.85 }}
+                        animate={{ opacity: 0, scale: 1.6 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6 }}
+                        className="absolute inset-0 rounded-lg border border-rose-400/40"
+                      />
+                    )}
+                  </AnimatePresence>
+                </button>
+              </div>
+            </motion.div>
 
             {/* Divider between feedback and copy */}
             <div className="w-px h-4 bg-white/[0.06]" />
@@ -197,10 +245,10 @@ function MessageBubble({ message }) {
             {/* Copy */}
             <button
               onClick={handleCopy}
-              className="p-1 rounded-lg hover:bg-white/[0.05] text-mist hover:text-cream transition-all duration-300"
+              className="p-1 rounded-lg hover:bg-white/[0.05] text-ash hover:text-cream transition-all duration-300"
               title="Copy response"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-mustard-500" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-mustard-400" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
 
             {/* Timestamp */}
@@ -209,8 +257,7 @@ function MessageBubble({ message }) {
             </span>
           </div>
         )}
-
-      </div>
+      </motion.div>
 
       {/* Avatar — user */}
       {isUser && (
@@ -219,7 +266,7 @@ function MessageBubble({ message }) {
           <User className="w-4 h-4 text-ash" />
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

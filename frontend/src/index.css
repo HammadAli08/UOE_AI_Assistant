@@ -11,10 +11,18 @@
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    height: 100%;
+    overflow: hidden;
   }
 
   body {
-    @apply min-h-screen;
+    height: 100%;
+    overflow: hidden;
+    margin: 0;
+  }
+
+  #root {
+    height: 100%;
   }
 
   /* ── Custom Selection — mustard tint ── */
@@ -516,4 +524,600 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: shimmer 2.5s linear infinite;
+}
+
+/* ═══════ SVG Stroke-Draw ═══════ */
+@keyframes strokeDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.stroke-draw-icon {
+  stroke-dasharray: var(--path-length, 200);
+  stroke-dashoffset: var(--path-length, 200);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stroke-draw-icon.is-visible {
+  animation: strokeDraw 0.6s linear forwards;
+}
+
+/* ═══════ Ambient Gradient Shift ═══════ */
+@keyframes ambientGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  50% {
+    background-position: 100% 100%;
+  }
+
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.ambient-gradient {
+  background-size: 300% 300%;
+  animation: ambientGradient 12s ease infinite;
+}
+
+.gradient-shift {
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+/* ═══════ Tilt Card ═══════ */
+.tilt-card {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.tilt-card-inner {
+  transition: transform 0.3s ease-out;
+  will-change: transform;
+}
+
+/* ═══════ Glass Depth (layered card) ═══════ */
+.glass-depth {
+  position: relative;
+}
+
+.glass-depth::before {
+  content: "";
+  position: absolute;
+  inset: 4px -2px -4px -2px;
+  border-radius: inherit;
+  background: rgba(15, 22, 35, 0.35);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.glass-depth:hover::before {
+  opacity: 1;
+}
+
+/* ═══════ Card Flip ═══════ */
+.flip-card {
+  perspective: 800px;
+}
+
+.flip-card-inner {
+  position: relative;
+  transition: transform 0.4s ease-out;
+  transform-style: preserve-3d;
+}
+
+.flip-card:hover .flip-card-inner,
+.flip-card:focus-within .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front,
+.flip-card-back {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flip-card-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
+
+/* ═══════ Hero Type Effect ═══════ */
+@keyframes typeReveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.type-reveal {
+  animation: typeReveal 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* ═══════ Micro-tooltip ═══════ */
+.micro-tooltip {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(15, 22, 35, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #8A95A8;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 30;
+}
+
+.micro-tooltip::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: rgba(15, 22, 35, 0.9);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.group:hover .micro-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(calc(-100% - 4px));
+}
+
+/* ═══════ Chat Interface Micro-interactions ═══════ */
+
+/* Mask sweep reveal for streaming text */
+.mask-sweep-reveal {
+  -webkit-mask-image: linear-gradient(to right, black 25%, transparent 75%);
+  -webkit-mask-size: 300% 100%;
+  mask-image: linear-gradient(to right, black 25%, transparent 75%);
+  mask-size: 300% 100%;
+}
+
+/* Custom blinking caret for streaming */
+.streaming-caret,
+.streaming-cursor p:last-child::after {
+  content: "";
+  display: inline-block;
+  width: 0.6em;
+  height: 1.2em;
+  background-color: #C8B94A;
+  margin-left: 4px;
+  vertical-align: text-bottom;
+  animation: caretBlink 0.9s step-end infinite;
+  border-radius: 1px;
+  box-shadow: 0 0 8px rgba(200, 185, 74, 0.4);
+}
+
+@keyframes caretBlink {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+
+  50% {
+    opacity: 0;
+    transform: scaleY(0.9);
+  }
+}
+
+/* Ambient noise background wrapper */
+.bg-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  pointer-events: none;
+  background-repeat: repeat;
+  position: absolute;
+  top: -10%;
+  left: -10%;
+  width: 120%;
+  height: 120%;
+}
+
+/* ═══════ Thinking Animation ═══════ */
+
+.thinking-bubble {
+  position: relative;
+  max-width: 85%;
+  border-radius: 1rem;
+  border-bottom-left-radius: 0.375rem;
+  padding: 1rem 1.25rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 3px solid var(--phase-color, rgba(200, 185, 74, 0.5));
+  transition: border-color 0.4s ease;
+}
+
+@media (min-width: 640px) {
+  .thinking-bubble {
+    max-width: 75%;
+    padding: 1rem 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .thinking-bubble {
+    max-width: 60%;
+  }
+}
+
+.thinking-ambient-glow {
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  width: 80px;
+  height: 80px;
+  border-radius: 9999px;
+  filter: blur(30px);
+  opacity: 0.6;
+  animation: thinkingGlowPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes thinkingGlowPulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.15);
+  }
+}
+
+/* ── Icon Wrapper with Orbit ── */
+
+.thinking-icon-wrapper {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 639px) {
+  .thinking-icon-wrapper {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+.thinking-icon-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thinking-icon {
+  display: block;
+}
+
+@media (max-width: 639px) {
+  .thinking-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* ── Orbiting Dots ── */
+
+.thinking-orbit-container {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.thinking-orbit-dot {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  opacity: 0.5;
+  animation: orbitDots 2.5s linear infinite;
+}
+
+.thinking-orbit-dot:nth-child(1) {
+  top: 0;
+  left: 50%;
+  transform-origin: 50% 20px;
+  animation-delay: 0s;
+}
+
+.thinking-orbit-dot:nth-child(2) {
+  top: 0;
+  left: 50%;
+  transform-origin: 50% 20px;
+  animation-delay: -0.83s;
+}
+
+.thinking-orbit-dot:nth-child(3) {
+  top: 0;
+  left: 50%;
+  transform-origin: 50% 20px;
+  animation-delay: -1.66s;
+}
+
+@media (max-width: 639px) {
+
+  .thinking-orbit-dot:nth-child(1),
+  .thinking-orbit-dot:nth-child(2),
+  .thinking-orbit-dot:nth-child(3) {
+    transform-origin: 50% 17px;
+  }
+}
+
+@keyframes orbitDots {
+  from {
+    transform: rotate(0deg) translateX(0);
+  }
+
+  to {
+    transform: rotate(360deg) translateX(0);
+  }
+}
+
+/* ── Phase Label ── */
+
+.thinking-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  background: linear-gradient(90deg,
+      rgba(232, 228, 220, 0.85) 0%,
+      rgba(200, 185, 74, 0.7) 45%,
+      rgba(232, 228, 220, 0.85) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: thinkingShimmer 2.5s linear infinite;
+}
+
+@media (max-width: 639px) {
+  .thinking-label {
+    font-size: 0.75rem;
+  }
+}
+
+@keyframes thinkingShimmer {
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* ── Animated Dots ── */
+
+.thinking-dots span {
+  animation: thinkingDotBounce 1.4s infinite ease-in-out;
+  display: inline-block;
+  -webkit-text-fill-color: rgba(138, 149, 168, 0.5);
+}
+
+.thinking-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.thinking-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.thinking-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes thinkingDotBounce {
+
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+/* ── Progress Track ── */
+
+.thinking-progress-track {
+  width: 100%;
+  max-width: 140px;
+  height: 2px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+@media (max-width: 639px) {
+  .thinking-progress-track {
+    max-width: 100px;
+  }
+}
+
+.thinking-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* ── Smart Mode Badge ── */
+
+.thinking-mode-badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(167, 139, 250, 0.7);
+  background: rgba(167, 139, 250, 0.08);
+  border: 1px solid rgba(167, 139, 250, 0.15);
+}
+
+/* ═══════ Landing Page Utilities ═══════ */
+
+/* Gradient text utility — mustard */
+.gradient-text {
+  background: linear-gradient(135deg, #C8B94A 0%, #D6C85C 50%, #F0CC4E 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Cyan gradient text */
+.gradient-text-cyan {
+  background: linear-gradient(135deg, #06B6D4 0%, #22D3EE 50%, #67E8F9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Neon border animated glow */
+.neon-border {
+  position: relative;
+}
+.neon-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(200, 185, 74, 0.3), transparent 40%, transparent 60%, rgba(156, 163, 86, 0.3));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+.neon-border:hover::before {
+  opacity: 1;
+}
+
+/* Hero orb */
+.hero-orb {
+  position: absolute;
+  bottom: -15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(400px, 55vw, 800px);
+  height: clamp(400px, 55vw, 800px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%,
+    rgba(200, 185, 74, 0.5) 0%,
+    rgba(200, 185, 74, 0.25) 30%,
+    rgba(168, 155, 61, 0.12) 50%,
+    transparent 70%);
+  filter: blur(40px);
+  animation: orbGlow 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes orbGlow {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateX(-50%) scale(1.08);
+    opacity: 1;
+  }
+}
+
+/* Starfield canvas */
+.starfield-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ═══════ Reduced Motion (MUST be last) ═══════ */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .stroke-draw-icon {
+    stroke-dashoffset: 0 !important;
+    fill: currentColor;
+    stroke: none;
+  }
+
+  .flip-card:hover .flip-card-inner,
+  .flip-card:focus-within .flip-card-inner {
+    transform: none;
+  }
+
+  .type-reveal {
+    clip-path: none !important;
+  }
 }

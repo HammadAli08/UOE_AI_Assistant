@@ -1,11 +1,12 @@
 // ──────────────────────────────────────────
-// ChatContainer — scrollable message list
+// ChatContainer — scrollable message list with AnimatePresence
 // ──────────────────────────────────────────
 import { useEffect, useRef, memo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import useChatStore from '@/store/useChatStore';
 import MessageBubble from './MessageBubble';
 import StreamingBubble from './StreamingBubble';
-import TypingIndicator from './TypingIndicator';
+import ThinkingAnimation from './ThinkingAnimation';
 import WelcomeScreen from './WelcomeScreen';
 
 
@@ -13,6 +14,7 @@ function ChatContainer({ onSuggestionClick }) {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const streamingContent = useChatStore((s) => s.streamingContent);
+  const enableSmart = useChatStore((s) => s.settings.enableSmart);
   const bottomRef = useRef(null);
 
   // Auto-scroll to bottom on new messages or streaming content
@@ -42,17 +44,42 @@ function ChatContainer({ onSuggestionClick }) {
       {/* Scrollable message area */}
       <div id="messages" className="flex-1 overflow-y-auto px-2 sm:px-4 pb-4 pt-4 space-y-3 overflow-anchor-none">
         <div className="max-w-4xl mx-auto">
-          {messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
-          ))}
+          <AnimatePresence mode="popLayout">
+            {messages.map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 80,
+                  damping: 18,
+                }}
+              >
+                <MessageBubble message={msg} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
-          {/* Streaming content */}
+          {/* Streaming content with fade-in + slide-up */}
           {isStreaming && streamingContent && (
-            <StreamingBubble content={streamingContent} />
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="streaming-glow"
+            >
+              <StreamingBubble content={streamingContent} />
+            </motion.div>
           )}
 
-          {/* Typing indicator — streaming started but no content yet */}
-          {isStreaming && !streamingContent && <TypingIndicator />}
+          {/* Thinking animation — plays before streaming */}
+          <AnimatePresence mode="wait">
+            {isStreaming && !streamingContent && (
+              <ThinkingAnimation mode={enableSmart ? 'smart' : 'standard'} />
+            )}
+          </AnimatePresence>
 
           <div ref={bottomRef} />
         </div>

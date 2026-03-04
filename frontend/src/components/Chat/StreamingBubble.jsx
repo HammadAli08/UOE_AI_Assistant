@@ -1,7 +1,8 @@
 // ──────────────────────────────────────────
-// StreamingBubble — displays content as it streams in
-// ──────────────────────────────────────────
+// StreamingBubble — displays content as it streams in (dark futurism theme)
+// ─────────────────────────────────────────-
 import { memo } from 'react';
+import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -9,22 +10,41 @@ function StreamingBubble({ content }) {
   if (!content) return null;
 
   return (
-    <div className="flex gap-3 px-4 sm:px-6 py-4 animate-fade-in">
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.3 }}
+      className="flex gap-3 px-4 sm:px-6 py-4"
+    >
       <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden
-                      border border-mustard-500/20 mt-0.5">
+                      border border-mustard-500/20 mt-0.5 shadow-glow-sm">
         <img src="/unnamed.jpg" alt="UOE" className="w-full h-full object-cover" />
       </div>
-      <div className="max-w-[85%] sm:max-w-[75%] lg:max-w-[65%]
-                      bg-white/[0.025] border border-white/[0.06]
-                      border-l-[3px] border-l-mustard-500/30
-                      rounded-2xl rounded-bl-md px-5 py-3.5">
-        <div className="message-content text-sm text-cream/85 streaming-cursor">
+      <motion.div
+        animate={{
+          boxShadow: [
+            '0 0 0 0 rgba(200, 185, 74, 0)',
+            '0 0 8px 1px rgba(200, 185, 74, 0.15)',
+            '0 0 0 0 rgba(200, 185, 74, 0)',
+          ],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+        className="max-w-[85%] sm:max-w-[75%] lg:max-w-[65%]
+                   bg-white/[0.025] border border-white/[0.06]
+                   border-l-[3px] border-l-mustard-500/30
+                   rounded-2xl rounded-bl-md px-5 py-3.5"
+      >
+        <div className="message-content text-sm text-cream/85 streaming-cursor mask-sweep-reveal">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {content}
           </ReactMarkdown>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
