@@ -228,7 +228,12 @@ function HeroSection() {
         <motion.div {...springUp(0)} className="mb-6">
           <motion.img
             src="/unnamed.jpg"
-            alt="University of Education"
+            alt="University of Education, Lahore — official logo"
+            fetchpriority="high"
+            loading="eager"
+            decoding="sync"
+            width="96"
+            height="96"
             className="w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-[0_0_40px_rgba(200,185,74,0.15)]"
             whileHover={{ scale: 1.08, rotate: 2, transition: { type: 'spring', stiffness: 300 } }}
           />
@@ -321,6 +326,7 @@ function HeroSection() {
 
           <motion.button
             onClick={() => document.querySelector('#features')?.scrollIntoView({ behavior: 'smooth' })}
+            aria-label="Scroll down to learn more about features"
             className="group inline-flex items-center gap-2.5 px-7 py-4 rounded-full
                        border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm
                        text-sm font-medium text-ash"

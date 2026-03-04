@@ -148,6 +148,8 @@ function ChatInput({ onSend, onStop, isStreaming }) {
             placeholder={currentPlaceholder}
             disabled={atMaxTurns}
             rows={1}
+            aria-label="Type your question here"
+            aria-multiline="true"
             className="w-full bg-transparent text-sm text-cream font-body placeholder:text-mist/70 px-4 pt-4 pb-2 resize-none outline-none min-h-[48px] max-h-[160px] disabled:opacity-40 disabled:cursor-not-allowed"
           />
 
@@ -159,6 +161,9 @@ function ChatInput({ onSend, onStop, isStreaming }) {
               <div className="relative" ref={nsPickerRef}>
                 <button
                   onClick={() => setShowNsPicker(!showNsPicker)}
+                  aria-label={`Select knowledge base. Current: ${currentNs?.label || 'None'}`}
+                  aria-expanded={showNsPicker}
+                  aria-haspopup="listbox"
                   className="flex items-center gap-1.5 px-3 py-[7px] rounded-full text-xs font-medium
                              border border-white/[0.08] bg-white/[0.03] text-mist
                              hover:text-cream hover:border-white/[0.14]
@@ -241,6 +246,8 @@ function ChatInput({ onSend, onStop, isStreaming }) {
               >
                 <motion.button
                   onClick={toggleSmart}
+                  aria-pressed={settings.enableSmart}
+                  aria-label={settings.enableSmart ? 'Disable Smart RAG (self-correcting retrieval)' : 'Enable Smart RAG (self-correcting retrieval)'}
                   className={clsx(
                     'group flex items-center gap-1.5 px-3.5 py-[7px] rounded-full text-xs font-medium',
                     'border transition-all duration-500 ease-out select-none',
@@ -306,9 +313,10 @@ function ChatInput({ onSend, onStop, isStreaming }) {
                   className="w-9 h-9 rounded-full bg-red-500/70 hover:bg-red-500
                              flex items-center justify-center text-white
                              transition-all duration-300"
+                  aria-label="Stop generating response"
                   title="Stop generating"
                 >
-                  <Square className="w-3.5 h-3.5" />
+                  <Square className="w-3.5 h-3.5" aria-hidden="true" />
                 </motion.button>
               ) : (
                 <motion.button

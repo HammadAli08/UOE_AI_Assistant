@@ -80,15 +80,18 @@ function Navbar() {
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden text-ash hover:text-cream transition-colors"
+            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav"
           >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
           </button>
         </div>
       </div>
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-navy-950/95 backdrop-blur-2xl border-t border-white/[0.06] px-6 py-5 space-y-3">
+        <div id="mobile-nav" role="navigation" aria-label="Mobile navigation" className="md:hidden bg-navy-950/95 backdrop-blur-2xl border-t border-white/[0.06] px-6 py-5 space-y-3">
           {navLinks.map((link) => (
             <button
               key={link.href}

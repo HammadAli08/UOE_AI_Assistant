@@ -1,18 +1,31 @@
 // ──────────────────────────────────────────
 // App — root component with routing
 // ──────────────────────────────────────────
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Menu, LogIn, User } from 'lucide-react';
 import useChatStore from '@/store/useChatStore';
 import useAuthStore from '@/store/useAuthStore';
 import useChat from '@/hooks/useChat';
 import useHealthCheck from '@/hooks/useHealthCheck';
-import HeroPage from '@/components/Landing/HeroPage';
+
+// Eagerly load only what the first paint needs
 import ChatContainer from '@/components/Chat/ChatContainer';
 import ChatInput from '@/components/Input/ChatInput';
 import ChatSidebar from '@/components/Chat/ChatSidebar';
-import AuthModal from '@/components/Auth/AuthModal';
+
+// Lazy-load heavy routes — they won't be in the initial bundle
+const HeroPage  = lazy(() => import('@/components/Landing/HeroPage'));
+const AuthModal = lazy(() => import('@/components/Auth/AuthModal'));
+
+/* ── Minimal spinner shown during lazy chunk load ── */
+function PageLoader() {
+  return (
+    <div className="h-dvh flex items-center justify-center bg-[#070B14]">
+      <span className="w-8 h-8 rounded-full border-2 border-mustard-500/20 border-t-mustard-500 animate-spin" />
+    </div>
+  );
+}
 
 /* ── Chat page (separate component so useNavigate works) ── */
 function ChatPage() {
@@ -58,12 +71,12 @@ function ChatPage() {
               onClick={toggleSidebar}
               className="lg:hidden p-1.5 -ml-1 rounded-lg text-mist hover:text-cream
                          hover:bg-white/[0.06] transition-colors"
-              aria-label="Toggle sidebar"
+              aria-label="Toggle navigation sidebar"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-5 h-5" aria-hidden="true" />
             </button>
 
-            <button onClick={() => navigate('/')} className="flex items-center gap-3 group">
+            <button onClick={() => navigate('/')} className="flex items-center gap-3 group" aria-label="Go to home page">
               <div className="w-8 h-8 rounded-lg overflow-hidden group-hover:ring-1 group-hover:ring-mustard-500/30 transition-all duration-300">
                 <img src="/unnamed.jpg" alt="UOE" className="w-full h-full object-cover rounded-lg" />
               </div>
@@ -120,7 +133,9 @@ function ChatPage() {
       </div>
 
       {/* ── Auth modal ── */}
-      <AuthModal />
+      <Suspense fallback={null}>
+        <AuthModal />
+      </Suspense>
     </div>
   );
 }
@@ -136,9 +151,11 @@ export default function App() {
   }, []);
 
   return (
-    <Routes>
-      <Route path="/" element={<HeroPage />} />
-      <Route path="/chat" element={<ChatPage />} />
-    </Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/" element={<HeroPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+      </Routes>
+    </Suspense>
   );
 }

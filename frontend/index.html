@@ -2,20 +2,58 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <meta name="theme-color" content="#070B14" />
-    <meta name="description" content="AI-powered academic assistant for University of Education, Lahore" />
+
+    <!-- ── SEO & Social ── -->
+    <title>UOE AI Assistant — AI-Powered Academic Guidance</title>
+    <meta name="description" content="Ask anything about University of Education Lahore — programs, admissions, fee structures, rules and regulations. Powered by GPT-4o and Smart RAG technology." />
+    <meta name="keywords" content="University of Education Lahore, UOE, AI assistant, academic programs, admissions, RAG, GPT-4o" />
+    <meta name="author" content="University of Education, Lahore" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- ── Open Graph ── -->
+    <meta property="og:title" content="UOE AI Assistant — AI-Powered Academic Guidance" />
+    <meta property="og:description" content="Instant, accurate answers about UOE programs, admissions, and regulations — powered by GPT-4o." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/unnamed.jpg" />
+
+    <!-- ── Favicon & PWA ── -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="UOE AI" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
+
+    <!-- ── LCP: Preload hero image (biggest perf win) ── -->
+    <link rel="preload" href="/unnamed.jpg" as="image" fetchpriority="high" />
+
+    <!-- ── Preload critical fonts to reduce render-blocking ── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <title>UOE AI Assistant</title>
+
+    <!-- Only load the weights actually used: Oswald 600/700, Merriweather 400/700, JetBrains Mono 400 -->
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Merriweather:wght@400;700&family=JetBrains+Mono:wght@400&display=swap"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Merriweather:wght@400;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+    </noscript>
+
+    <!-- ── Critical inline CSS: prevent FOUC ── -->
+    <style>
+      *,::before,::after{box-sizing:border-box}
+      html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+      body{margin:0;background:#070B14;color:#E8E4DC;font-family:Merriweather,Georgia,serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+      #root{min-height:100dvh}
+      /* Prevent layout shift from font swap */
+      .font-display{font-family:Oswald,Impact,sans-serif}
+    </style>
   </head>
-  <body class="font-body antialiased bg-[#070B14] text-[#E8E4DC]">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

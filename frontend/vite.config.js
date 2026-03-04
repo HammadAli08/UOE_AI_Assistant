@@ -66,15 +66,45 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     minify: 'terser',
+    // Warn on chunks > 500KB
+    chunkSizeWarningLimit: 500,
     terserOptions: {
-      compress: { drop_console: true, drop_debugger: true },
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.warn', 'console.info'],
+        passes: 2,
+      },
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          markdown: ['react-markdown', 'remark-gfm'],
+        // Fine-grained code splitting — each chunk loaded only when needed
+        manualChunks(id) {
+          // Framer Motion — landing page only (large, ~40KB)
+          if (id.includes('node_modules/framer-motion')) {
+            return 'framer-motion';
+          }
+          // Markdown rendering — chat only (~160KB)
+          if (id.includes('node_modules/react-markdown') || id.includes('node_modules/remark') || id.includes('node_modules/rehype') || id.includes('node_modules/micromark') || id.includes('node_modules/mdast') || id.includes('node_modules/hast')) {
+            return 'markdown';
+          }
+          // Supabase — auth & persistence (~160KB)
+          if (id.includes('node_modules/@supabase')) {
+            return 'supabase';
+          }
+          // Lucide icons (~10KB)
+          if (id.includes('node_modules/lucide-react')) {
+            return 'icons';
+          }
+          // Everything else from node_modules → vendor
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         },
+        // Add content hash to filenames for long-term caching
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
   },
