@@ -19,25 +19,33 @@ function ChatContainer({ onSuggestionClick }) {
 
   // Auto-scroll to bottom on new messages or streaming content
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = document.getElementById('messages');
+    if (container) {
+      if (isStreaming) {
+        // Instant during streaming — batched smooth calls stack up and cause jank on mobile
+        container.scrollTop = container.scrollHeight;
+      } else {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   }, [messages, streamingContent, isStreaming]);
 
-  // Keyboard-aware scroll for mobile
+  // Keyboard-aware scroll for mobile: snap to bottom when keyboard opens/closes
   useEffect(() => {
-    if (window.visualViewport) {
-      const scrollToBottom = () => {
-        setTimeout(() => {
-          bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 120);
-      };
-      window.visualViewport.addEventListener('resize', scrollToBottom);
-      return () => window.visualViewport.removeEventListener('resize', scrollToBottom);
-    }
+    if (!window.visualViewport) return;
+    const scrollToBottom = () => {
+      setTimeout(() => {
+        const container = document.getElementById('messages');
+        if (container) container.scrollTop = container.scrollHeight;
+      }, 150);
+    };
+    window.visualViewport.addEventListener('resize', scrollToBottom);
+    return () => window.visualViewport.removeEventListener('resize', scrollToBottom);
   }, []);
 
   if (messages.length === 0 && !isStreaming) {
     return (
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y flex flex-col md:justify-center">
         <WelcomeScreen onSuggestionClick={onSuggestionClick} />
       </div>
     );
@@ -46,7 +54,7 @@ function ChatContainer({ onSuggestionClick }) {
   return (
     <div className="flex-1 min-h-0 flex flex-col relative">
       {/* Scrollable message area */}
-      <div id="messages" className="flex-1 overflow-y-auto px-2 sm:px-4 pb-4 pt-4 space-y-3 overflow-anchor-none">
+      <div id="messages" className="flex-1 overflow-y-auto overscroll-contain touch-pan-y px-2 sm:px-4 pb-36 md:pb-6 pt-4 space-y-3 overflow-anchor-none">
         <div className="max-w-4xl mx-auto">
           <AnimatePresence mode="popLayout">
             {messages.map((msg) => (
