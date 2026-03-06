@@ -99,6 +99,17 @@ EMBEDDING_CACHE_TTL_SECONDS = float(os.getenv("EMBEDDING_CACHE_TTL_SECONDS", "36
 RETRIEVAL_CACHE_TTL_SECONDS = float(os.getenv("RETRIEVAL_CACHE_TTL_SECONDS", "45"))
 
 # =============================================================================
+# ENSEMBLE RETRIEVER CONFIGURATION
+# =============================================================================
+
+ENSEMBLE_ENABLED = os.getenv("ENSEMBLE_ENABLED", "true").lower() == "true"
+ENSEMBLE_DENSE_WEIGHT = float(os.getenv("ENSEMBLE_DENSE_WEIGHT", "0.7"))
+ENSEMBLE_SPARSE_WEIGHT = float(os.getenv("ENSEMBLE_SPARSE_WEIGHT", "0.3"))
+ENSEMBLE_OVERFETCH_MULTIPLIER = int(os.getenv("ENSEMBLE_OVERFETCH_MULTIPLIER", "3"))
+ENSEMBLE_MAX_CANDIDATES = int(os.getenv("ENSEMBLE_MAX_CANDIDATES", "30"))
+RRF_K = int(os.getenv("RRF_K", "60"))
+
+# =============================================================================
 # TIMEOUTS
 # =============================================================================
 

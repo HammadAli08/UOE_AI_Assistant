@@ -123,7 +123,7 @@ class RAGPipeline:
         for attempt in range(max_retries + 1):
             # Retrieve — use more chunks on retries (progressively)
             retrieve_k = top_k + (boost * attempt)
-            documents = self.retriever.retrieve(
+            documents = self.retriever.ensemble_retrieve(
                 query=current_query, namespace=pinecone_namespace, top_k=retrieve_k,
             )
             total_retrievals += 1
@@ -282,9 +282,9 @@ class RAGPipeline:
                     "run_id": _run_id,
                 }
         else:
-            # STANDARD PATH: single retrieval
+            # STANDARD PATH: single retrieval (ensemble: dense + BM25 via RRF)
             t_retrieve = time.perf_counter()
-            documents = self.retriever.retrieve(
+            documents = self.retriever.ensemble_retrieve(
                 query=retrieval_query, namespace=pinecone_namespace, top_k=top_k_retrieve,
             )
             logger.info("⏱ retrieve: %.2fs  (docs=%d)", time.perf_counter() - t_retrieve, len(documents))
@@ -407,9 +407,9 @@ class RAGPipeline:
                 yield {"type": "token", "content": fallback}
                 return
         else:
-            # STANDARD PATH: single retrieval
+            # STANDARD PATH: single retrieval (ensemble: dense + BM25 via RRF)
             t_retrieve = time.perf_counter()
-            documents = self.retriever.retrieve(
+            documents = self.retriever.ensemble_retrieve(
                 query=retrieval_query, namespace=pinecone_namespace, top_k=top_k_retrieve,
             )
             logger.info("⏱ retrieve: %.2fs  (docs=%d)", time.perf_counter() - t_retrieve, len(documents))

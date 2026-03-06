@@ -26,6 +26,12 @@ from .config import (
     OPENAI_EMBEDDING_DIMENSIONS,
     RETRIEVAL_CACHE_TTL_SECONDS,
     DEFAULT_TOP_K_RETRIEVE,
+    ENSEMBLE_ENABLED,
+    ENSEMBLE_DENSE_WEIGHT,
+    ENSEMBLE_SPARSE_WEIGHT,
+    ENSEMBLE_OVERFETCH_MULTIPLIER,
+    ENSEMBLE_MAX_CANDIDATES,
+    RRF_K,
 )
 
 logger = logging.getLogger(__name__)
@@ -159,6 +165,105 @@ class Retriever:
             namespace,
         )
         return documents
+
+    # ── Ensemble retrieval (Dense + BM25 via Reciprocal Rank Fusion) ──
+
+    @traceable(name="retriever.ensemble_retrieve", run_type="retriever")
+    def ensemble_retrieve(
+        self,
+        query: str,
+        namespace: str,
+        top_k: int = DEFAULT_TOP_K_RETRIEVE,
+    ) -> List[Dict]:
+        """
+        Ensemble retriever: over-fetches from Pinecone (dense), applies a
+        local BM25 keyword score on the returned texts, and fuses both
+        ranked lists using Reciprocal Rank Fusion (RRF).
+
+        Falls back to dense-only if ensemble is disabled or BM25 fails.
+
+        Args:
+            query:     The search query
+            namespace: Pinecone namespace to search in
+            top_k:     Number of final results to return
+
+        Returns:
+            List of document dicts sorted by fused RRF score
+        """
+        if not ENSEMBLE_ENABLED:
+            return self.retrieve(query, namespace, top_k)
+
+        # 1. Over-fetch from Pinecone (dense retrieval)
+        overfetch_k = min(
+            top_k * ENSEMBLE_OVERFETCH_MULTIPLIER,
+            ENSEMBLE_MAX_CANDIDATES,
+        )
+        overfetch_k = max(overfetch_k, top_k)  # never less than top_k
+
+        candidates = self.retrieve(query, namespace, overfetch_k)
+        if not candidates:
+            return []
+
+        # 2. Build ephemeral BM25 index over candidate texts
+        try:
+            from rank_bm25 import BM25Okapi
+
+            texts = [doc.get("text", "") or "" for doc in candidates]
+            # Simple whitespace tokenisation (fast, language-agnostic)
+            tokenized_corpus = [t.lower().split() for t in texts]
+            tokenized_query = query.lower().split()
+
+            # Guard: if every document text is empty, skip BM25
+            if all(len(t) == 0 for t in tokenized_corpus):
+                logger.debug("Ensemble: all candidate texts empty, falling back to dense-only")
+                return candidates[:top_k]
+
+            bm25 = BM25Okapi(tokenized_corpus)
+            bm25_scores = bm25.get_scores(tokenized_query)  # numpy array, len == len(candidates)
+
+        except Exception as exc:
+            logger.warning("Ensemble BM25 scoring failed (%s), falling back to dense-only", exc)
+            return candidates[:top_k]
+
+        # 3. Build rank maps for both signals
+        #    Dense rank: candidates are already sorted by Pinecone score (desc)
+        dense_rank = {doc["id"]: rank for rank, doc in enumerate(candidates)}
+
+        #    BM25 rank: sort candidate indices by BM25 score (desc)
+        bm25_order = sorted(range(len(candidates)), key=lambda i: -bm25_scores[i])
+        bm25_rank = {candidates[idx]["id"]: rank for rank, idx in enumerate(bm25_order)}
+
+        # 4. Reciprocal Rank Fusion
+        k = RRF_K
+        wd = ENSEMBLE_DENSE_WEIGHT
+        ws = ENSEMBLE_SPARSE_WEIGHT
+
+        fused: List[Tuple[Dict, float]] = []
+        for doc in candidates:
+            doc_id = doc["id"]
+            rrf_score = (
+                wd * (1.0 / (k + dense_rank.get(doc_id, len(candidates))))
+                + ws * (1.0 / (k + bm25_rank.get(doc_id, len(candidates))))
+            )
+            fused.append((doc, rrf_score))
+
+        # Sort by fused score descending
+        fused.sort(key=lambda x: -x[1])
+
+        # Attach ensemble metadata and return top_k
+        results: List[Dict] = []
+        for doc, rrf_score in fused[:top_k]:
+            doc["ensemble_score"] = round(rrf_score, 6)
+            doc["dense_rank"] = dense_rank.get(doc["id"], -1)
+            doc["bm25_rank"] = bm25_rank.get(doc["id"], -1)
+            results.append(doc)
+
+        logger.info(
+            "Ensemble retrieve: %d candidates → top %d via RRF "
+            "(dense_w=%.2f, bm25_w=%.2f, rrf_k=%d, namespace=%s)",
+            len(candidates), len(results), wd, ws, k, namespace,
+        )
+        return results
 
 
 # Singleton instance

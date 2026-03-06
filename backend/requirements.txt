@@ -23,6 +23,9 @@ httpx[http2]>=0.27.0
 # OpenAI SDK (for GPT-4o)
 openai>=1.0.0
 
+# BM25 sparse retrieval (ensemble retriever)
+rank-bm25>=0.2.2
+
 # Redis (short-term memory)
 redis>=5.0.0
 

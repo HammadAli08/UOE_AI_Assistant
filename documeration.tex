@@ -1,0 +1,1960 @@
+% =============================================================================
+% UOE AI ASSISTANT - FINAL YEAR PROJECT DOCUMENTATION
+% University of Education, Lahore
+% Department of Information Technology
+% =============================================================================
+
+\documentclass[12pt,a4paper]{book}
+\usepackage[top=1in,bottom=1in,left=1.5in,right=1in]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{times}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{caption}
+\usepackage{url}
+\usepackage{enumitem}
+\usepackage{appendix}
+
+% =============================================================================
+% FORMATTING SETTINGS
+% =============================================================================
+
+% Font settings
+\RequirePackage{times}
+\RequirePackage[T1]{fontenc}
+
+% Paragraph formatting
+\parindent 0pt
+\parskip 6pt
+
+% Line spacing
+\linespread{1.5}
+
+% Page numbering
+\pagestyle{plain}
+
+% Header and Footer
+\fancyhf{}
+\fancyhead[LO]{\leftmark}
+\fancyhead[RE]{\rightmark}
+\fancyfoot[LE,RO]{\thepage}
+\fancyfoot[LO,RE]{University of Education Lahore}
+%\RequirePackage{bidi}
+%\setlength{\headheight}{15pt}
+
+% Chapter formatting
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+{\normalfont\fontsize{16}{12}\bfseries\centering}
+{\chaptertitlename\ \thechapter}{20pt}{\fontsize{16}{12}\bfseries}
+
+\titleformat{\section}
+{\normalfont\fontsize{14}{12}\bfseries}
+{\thesection}{1em}{}
+
+\titleformat{\subsection}
+{\normalfont\fontsize{12}{12}\bfseries}
+{\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}
+{\normalfont\fontsize{12}{12}\bfseries\itshape}
+{\thesubsubsection}{1em}{}
+
+% Table and Figure numbering
+\numberwithin{table}{chapter}
+\numberwithin{figure}{chapter}
+\numberwithin{equation}{chapter}
+
+% Hyperlink settings
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    citecolor=black,
+}
+
+% =============================================================================
+% CUSTOM COMMANDS
+% =============================================================================
+
+% For code listings
+\lstset{
+    basicstyle=\ttfamily\small,
+    frame=single,
+    numbers=left,
+    stepnumber=1,
+    numbersep=5pt,
+    backgroundcolor=\color{white},
+    showspaces=false,
+    showstringspaces=false,
+    tabsize=4,
+    breaklines=true,
+}
+
+% Define colors
+\definecolor{lightgray}{rgb}{0.95,0.95,0.95}
+\definecolor{darkblue}{rgb}{0.0,0.0,0.6}
+
+% =============================================================================
+% DOCUMENT BEGINS
+% =============================================================================
+
+\begin{document}
+
+% =============================================================================
+% PRELIMINARY PAGES
+% =============================================================================
+
+% ---------------------------------------------------------------------------
+% 1.1 HARD BOUND TITLE COVER (No page number)
+% ---------------------------------------------------------------------------
+\thispagestyle{empty}
+\strut\vfill
+\begin{center}
+\fontsize{16}{12}\bfseries\selectfont
+
+~\\[3\baselineskip]
+PROJECT TITLE
+
+~\\[5\baselineskip]
+PROJECT ID – FYP-IT-2024-001
+
+~\\[4\baselineskip]
+PROJECT ADVISOR: DR. MUHAMMAD SHEHZAD
+
+~\\[2\baselineskip]
+SUBMITTED BY
+
+HAMMAD ALI TAHIR – UE-123456\\
+MUHAMMAD MUZAIB – UE-123457\\
+AHMAD NAWAZ – UE-123458
+
+~\\[4\baselineskip]
+UNIVERSITY OF EDUCATION LAHORE\\
+DIVISION OF SCIENCE AND TECHNOLOGY\\
+DEPARTMENT OF INFORMATION TECHNOLOGY
+
+~\\[2\baselineskip]
+2024-2025
+
+\end{center}
+\vfill\strut
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 1.2 INNER TITLE PAGE
+% ---------------------------------------------------------------------------
+\thispagestyle{empty}
+\strut\vfill
+\begin{center}
+\fontsize{14}{12}\bfseries\selectfont
+
+AI-POWERED ACADEMIC ASSISTANT FOR UNIVERSITY OF EDUCATION LAHORE
+
+~\\[2\baselineskip]
+BS in Information Technology – 2024
+
+~\\[4\baselineskip]
+\normalfont\normalsize
+A project submitted in partial fulfillment\\
+of the requirements for the award of the degree
+
+~\\[2\baselineskip]
+\bfseries BS in Information Technology
+
+~\\[6\baselineskip]
+\normalfont\normalsize
+Division of Science and Technology\\
+University of Education Lahore
+
+~\\[2\baselineskip]
+March 2025
+
+\end{center}
+\vfill\strut
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 1.3 COPYRIGHT PAGE
+% ---------------------------------------------------------------------------
+\thispagestyle{empty}
+\strut\vfill
+\begin{center}
+
+© Copyright Hammad Ali Tahir, Muhammad Muzaib, Ahmad Nawaz, 2025
+
+~\\[4\baselineskip]
+All rights reserved.
+
+\end{center}
+\vfill\strut
+\clearpage
+
+% ---------------------------------------------------------------------------
+% Roman Numbering Starts
+% ---------------------------------------------------------------------------
+\pagestyle{plain}
+\cleardoublepage
+\pagenumbering{roman}
+\counterwithin{page}{chapter}
+
+% ---------------------------------------------------------------------------
+% 1.4 SUPERVISOR APPROVAL STATEMENT
+% ---------------------------------------------------------------------------
+\chapter*{SUPERVISOR APPROVAL STATEMENT}
+\addcontentsline{toc}{chapter}{SUPERVISOR APPROVAL STATEMENT}
+
+\bigskip
+\bigskip
+
+This is to certify that the project entitled \textbf{"AI-Powered Academic Assistant for University of Education Lahore"} has been prepared under my supervision and submitted by:
+
+\bigskip
+\begin{tabular}{l l}
+Hammad Ali Tahir & UE-123456\\
+Muhammad Muzaib & UE-123457\\
+Ahmad Nawaz & UE-123458
+\end{tabular}
+
+\bigskip
+I have reviewed the documentation and the project work carried out by the students. The project has sufficient scope and the work qualifies for the award of the degree of Bachelor of Science in Information Technology.
+
+\bigskip\bigskip
+\bigskip
+
+\begin{tabular}{p{3in} p{3in}}
+\textbf{Project Supervisor} & \textbf{Project Examiner}\\[2\baselineskip]
+Dr. Muhammad Shehzad & Dr. Ahmad Raza\\
+Associate Professor & Assistant Professor\\
+Department of IT & Department of IT\\
+University of Education Lahore & University of Education Lahore
+\end{tabular}
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 1.5 STUDENT DECLARATION
+% ---------------------------------------------------------------------------
+\chapter*{STUDENT DECLARATION}
+\addcontentsline{toc}{chapter}{STUDENT DECLARATION}
+
+\bigskip
+We hereby declare that:
+
+\begin{enumerate}
+\item The work presented in this project is original and has not been submitted previously for any other degree or qualification.
+\item All sources of information and data from literature have been properly cited and referenced.
+\item We understand that the university may revoke the degree if any fraud is detected.
+\end{enumerate}
+
+\bigskip\bigskip
+We declare that this project is the result of our own work and research.
+
+\bigskip\bigskip\bigskip
+
+\begin{tabular}{p{2.5in} p{2.5in}}
+ & \\[1\baselineskip]
+\hline
+\textbf{Hammad Ali Tahir} & Date: \_\_\_\_\_\_\_\_\\[1\baselineskip]
+UE-123456 & \\
+\end{tabular}
+
+\bigskip
+
+\begin{tabular}{p{2.5in} p{2.5in}}
+ & \\[1\baselineskip]
+\hline
+\textbf{Muhammad Muzaib} & Date: \_\_\_\_\_\_\_\_\\[1\baselineskip]
+UE-123457 & \\
+\end{tabular}
+
+\bigskip
+
+\begin{tabular}{p{2.5in} p{2.5in}}
+ & \\[1\baselineskip]
+\hline
+\textbf{Ahmad Nawaz} & Date: \_\_\_\_\_\_\_\_\\[1\baselineskip]
+UE-123458 & \\
+\end{tabular}
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 1.6 PLAGIARISM UNDERTAKING
+% ---------------------------------------------------------------------------
+\chapter*{PLAGIARISM UNDERTAKING}
+\addcontentsline{toc}{chapter}{PLAGIARISM UNDERTAKING}
+
+\bigskip
+We hereby confirm:
+
+\begin{enumerate}
+\item This project is our own work and has not been copied from any other source.
+\item We have followed the zero plagiarism policy of the Higher Education Commission Pakistan.
+\item All sources of information, whether quoted, summarized, or referred to, have been properly cited.
+\item No unauthorized contribution has been made to this work.
+\item We understand that if plagiarism is found, the university may revoke the degree.
+\end{enumerate}
+
+\bigskip
+This project has been checked for plagiarism using industry-standard tools and the similarity index is within acceptable limits.
+
+\bigskip\bigskip\bigskip
+
+\begin{tabular}{p{2.5in} p{2.5in}}
+ & \\[1\baselineskip]
+\hline
+\textbf{Hammad Ali Tahir} & Date: \_\_\_\_\_\_\_\_\\[1\baselineskip]
+UE-123456 & \\
+\end{tabular}
+
+\bigskip
+
+\begin{tabular}{p{2.5in} p{2.5in}}
+ & \\[1\baselineskip]
+\hline
+\textbf{Muhammad Muzaib} & Date: \_\_\_\_\_\_\_\_\\[1\baselineskip]
+UE-123457 & \\
+\end{tabular}
+
+\bigskip
+
+\begin{tabular}{p{2.5in} p{2.5in}}
+ & \\[1\baselineskip]
+\hline
+\textbf{Ahmad Nawaz} & Date: \_\_\_\_\_\_\_\_\\[1\baselineskip]
+UE-123458 & \\
+\end{tabular}
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 1.7 CERTIFICATE OF APPROVAL
+% ---------------------------------------------------------------------------
+\chapter*{CERTIFICATE OF APPROVAL}
+\addcontentsline{toc}{chapter}{CERTIFICATE OF APPROVAL}
+
+\bigskip
+This is to certify that the project titled \textbf{"AI-Powered Academic Assistant for University of Education Lahore"} has been conducted under the supervision of Dr. Muhammad Shehzad at the Department of Information Technology, University of Education Lahore.
+
+\bigskip
+The project has not been submitted to any other university or institution for the award of any degree.
+
+\bigskip
+This project fulfills the requirements for the award of Bachelor of Science in Information Technology.
+
+\bigskip\bigskip
+
+\begin{tabular}{p{3in} p{3in}}
+ & \\[1\baselineskip]
+\hline
+\textbf{Students} & Date: \_\_\_\_\_\_\_\_\\[1\baselineskip]
+Hammad Ali Tahir & \\
+Muhammad Muzaib & \\
+Ahmad Nawaz & \\
+\end{tabular}
+
+\bigskip
+
+\begin{tabular}{p{3in} p{3in}}
+ & \\[1\baselineskip]
+\hline
+\textbf{Project Supervisor} & Date: \_\_\_\_\_\_\_\_\\[1\baselineskip]
+Dr. Muhammad Shehzad & \\
+\end{tabular}
+
+\bigskip
+
+\begin{tabular}{p{3in} p{3in}}
+ & \\[1\baselineskip]
+\hline
+\textbf{Project Examiner} & Date: \_\_\_\_\_\_\_\_\\[1\baselineskip]
+Dr. Ahmad Raza & \\
+\end{tabular}
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 1.8 CONTROLLER OF EXAMINATION NOTIFICATION
+% ---------------------------------------------------------------------------
+\chapter*{CONTROLLER OF EXAMINATION NOTIFICATION}
+\addcontentsline{toc}{chapter}{CONTROLLER OF EXAMINATION NOTIFICATION}
+
+\bigskip
+\begin{center}
+\bfseries OFFICE OF THE CONTROLLER OF EXAMINATIONS\\
+University of Education Lahore
+\end{center}
+
+\bigskip
+This is to certify that the following students have successfully completed their Final Year Project for the award of Bachelor of Science in Information Technology:
+
+\bigskip
+
+\begin{table}[h]
+\centering
+\fontsize{11}{10}\selectfont
+\begin{tabular}{|c|l|l|c|c|c|}
+\hline
+\textbf{S.No} & \textbf{Registration Number} & \textbf{Complete Name} & \textbf{Course Work Marks} & \textbf{Project Marks} & \textbf{Total Result}\\
+\hline
+1 & UE-123456 & Hammad Ali Tahir & 850 & 150 & 1000\\
+\hline
+2 & UE-123457 & Muhammad Muzaib & 850 & 150 & 1000\\
+\hline
+3 & UE-123458 & Ahmad Nawaz & 850 & 150 & 1000\\
+\hline
+\end{tabular}
+\end{table}
+
+\bigskip
+Project Title: AI-Powered Academic Assistant for University of Education Lahore
+
+\bigskip
+Project Supervisor: Dr. Muhammad Shehzad
+
+\bigskip\bigskip
+
+\begin{tabular}{p{4in}}
+\\[3\baselineskip]
+\hline
+\textbf{Controller of Examinations}\\
+University of Education Lahore
+\end{tabular}
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 1.9 ACKNOWLEDGMENT
+% ---------------------------------------------------------------------------
+\chapter*{ACKNOWLEDGMENT}
+\addcontentsline{toc}{chapter}{ACKNOWLEDGMENT}
+
+\bigskip
+We acknowledge the guidance and support of Dr. Muhammad Shehzad who supervised this research project. His valuable insights and continuous encouragement were instrumental in the successful completion of this project.
+
+\bigskip
+We express our gratitude to Dr. Ahmad Raza, Head of Department, Information Technology, for providing the necessary resources and infrastructure.
+
+\bigskip
+We also thank the faculty members of the Department of Information Technology for their guidance and support throughout our academic journey.
+
+\bigskip
+We acknowledge the University of Education Lahore for providing access to the digital repository and official documents that formed the knowledge base for this project.
+
+\bigskip
+Finally, we thank our friends and family for their constant support and encouragement during the course of this project.
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 1.10 ABSTRACT
+% ---------------------------------------------------------------------------
+\chapter*{ABSTRACT}
+\addcontentsline{toc}{chapter}{ABSTRACT}
+
+\bigskip
+This project presents an AI-Powered Academic Assistant designed specifically for the University of Education, Lahore. The system enables students to ask questions in both English and Roman Urdu, receiving accurate, source-grounded answers from official university documents.
+
+\bigskip
+The project implements a Retrieval-Augmented Generation (RAG) pipeline with three knowledge bases populated from official university documents. The key innovation is the Self-Correcting Smart RAG system that grades retrieved chunks, rewrites queries when necessary, and retries up to three times (four retrieval attempts total) before returning the best available result.
+
+\bigskip
+The backend is built using FastAPI with Server-Sent Events (SSE) streaming for real-time response delivery. The frontend features a modern dark glassmorphic design with smooth animations using React and Framer Motion. The system maintains conversational memory using Redis, storing up to ten turns of context with automatic expiration.
+
+\bigskip
+The knowledge base consists of three namespaces: BS/ADP Programs, MS/PhD Programs, and University Rules and Regulations. Each namespace has specialized prompts optimized for generating accurate responses specific to that domain.
+
+\bigskip
+\textbf{Keywords:} Artificial Intelligence, Academic Assistant, Retrieval-Augmented Generation, University Automation, Smart RAG, Pinecone, FastAPI, React
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% TABLE OF CONTENTS
+% ---------------------------------------------------------------------------
+\tableofcontents
+\clearpage
+
+% ---------------------------------------------------------------------------
+% LIST OF TABLES
+% ---------------------------------------------------------------------------
+\listoftables
+\clearpage
+
+% ---------------------------------------------------------------------------
+% LIST OF FIGURES
+% ---------------------------------------------------------------------------
+\listoffigures
+\clearpage
+
+% =============================================================================
+% MAIN CHAPTERS
+% =============================================================================
+\cleardoublepage
+\pagenumbering{arabic}
+\chapter{INTRODUCTION AND INFORMATION GATHERING}
+
+% ---------------------------------------------------------------------------
+% 1.1 INTRODUCTION
+% ---------------------------------------------------------------------------
+\section{Introduction}
+
+The University of Education, Lahore serves thousands of students across multiple campuses. Students often struggle to find accurate information about course structures, admission requirements, examination policies, and university regulations. The existing information retrieval systems are either outdated or inefficient, requiring students to manually search through lengthy PDF documents.
+
+This project aims to solve this problem by developing an AI-Powered Academic Assistant that can understand student queries in natural language and provide accurate, source-grounded answers from official university documents. The system supports queries in both English and Roman Urdu, making it accessible to a wider audience of Pakistani students.
+
+The proposed system utilizes modern Artificial Intelligence techniques, specifically Retrieval-Augmented Generation (RAG), to combine the power of large language models with the accuracy of document-based retrieval. By leveraging vector embeddings and semantic search, the system can understand the intent behind user queries and retrieve the most relevant information from the university's knowledge base.
+
+% ---------------------------------------------------------------------------
+% 1.2 GENERAL OVERVIEW OF THE SYSTEM
+% ---------------------------------------------------------------------------
+\section{General Overview of the System}
+
+The UOE AI Assistant is a full-stack web application that consists of three main components:
+
+\subsection{Frontend Application}
+The frontend is a Single Page Application (SPA) built using React.js with Vite as the build tool. It features a modern dark-themed interface with glassmorphic design elements. The main features include:
+\begin{itemize}
+    \item Landing page with project information
+    \item Interactive chat interface with streaming responses
+    \item Namespace selector for different knowledge bases
+    \item User authentication via Supabase
+    \item Chat history persistence
+    \item Source citation metadata attachment in assistant responses
+    \item Feedback mechanism for quality improvement
+\end{itemize}
+
+\subsection{Backend API}
+The backend is built using FastAPI, a modern Python web framework. It provides RESTful endpoints and supports Server-Sent Events (SSE) for real-time streaming. The backend handles:
+\begin{itemize}
+    \item Query processing and enhancement
+    \item Vector database retrieval
+    \item LLM response generation
+    \item Conversational memory management
+    \item Namespace discovery for frontend selection
+    \item Feedback logging
+\end{itemize}
+
+\subsection{Data Infrastructure}
+The system uses multiple external services:
+\begin{itemize}
+    \item \textbf{Pinecone}: Vector database for semantic search
+    \item \textbf{Redis Cloud}: Session memory (TTL-based context storage)
+    \item \textbf{OpenAI}: GPT-4o-mini for text generation; \texttt{text-embedding-3-large} for embeddings
+    \item \textbf{Supabase}: Authentication and chat persistence
+    \item \textbf{LangSmith}: Observability and tracing
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+% 1.3 PROBLEM STATEMENT
+% ---------------------------------------------------------------------------
+\section{Problem Statement}
+
+Students at the University of Education, Lahore face several challenges when trying to access academic information:
+
+\begin{enumerate}
+    \item \textbf{Information Scattered Across Documents}: Course outlines, admission criteria, fee structures, and regulations are stored in separate PDF files, making it difficult for students to find specific information.
+
+    \item \textbf{Outdated Search Methods}: The current systems rely on keyword matching, which fails to understand the semantic intent behind user queries.
+
+    \item \textbf{Language Barrier}: Many students prefer to ask questions in Roman Urdu (Urdu written in Latin script), but existing systems only support English.
+
+    \item \textbf{Lack of Conversational Context}: Students cannot have follow-up conversations about their queries, requiring them to rephrase questions repeatedly.
+
+    \item \textbf{No Source Attribution}: Existing systems do not provide citations, making it difficult for students to verify the information.
+
+    \item \textbf{Poor User Experience}: The current interfaces are not user-friendly and lack modern interaction patterns.
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+% 1.4 GOAL AND OBJECTIVES
+% ---------------------------------------------------------------------------
+\section{Goal and Objectives}
+
+\subsection{Goal}
+The primary goal of this project is to develop an intelligent academic assistant that can understand natural language queries and provide accurate, cited answers from official university documents, improving information accessibility for students.
+
+\subsection{Objectives}
+\begin{enumerate}
+    \item \textbf{Information Retrieval}: Implement semantic search over university document embeddings across three namespaces.
+
+    \item \textbf{AI Integration}: Develop a production-grade RAG pipeline with GPT-4o-mini for generating natural language responses.
+
+    \item \textbf{Multilingual Support}: Enable query processing in both English and Roman Urdu.
+
+    \item \textbf{Conversational Memory}: Maintain context across multiple turns of conversation using Redis-backed session memory.
+
+    \item \textbf{Real-Time Streaming}: Implement SSE streaming for instant response feedback.
+
+    \item \textbf{Self-Correcting Retrieval}: Create a Smart RAG system that automatically improves retrieval quality through query rewriting and chunk grading.
+
+    \item \textbf{Source Attribution}: Provide citations for all generated responses.
+
+    \item \textbf{Modern User Interface}: Design an intuitive, visually appealing interface with smooth animations.
+
+    \item \textbf{Feedback System}: Implement a mechanism for users to rate response quality for continuous improvement.
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+% 1.5 RESEARCH QUESTIONS
+% ---------------------------------------------------------------------------
+\section{Research Questions}
+
+This project addresses the following research questions:
+
+\begin{enumerate}
+    \item \textbf{RQ1}: How can we effectively retrieve relevant information from a large corpus of university documents using semantic search?
+
+    \item \textbf{RQ2}: How can we generate accurate, contextually appropriate responses while maintaining source attribution?
+
+    \item \textbf{RQ3}: How can we handle multilingual queries (English and Roman Urdu) in a unified system?
+
+    \item \textbf{RQ4}: How can we implement self-correcting retrieval that automatically improves result quality?
+
+    \item \textbf{RQ5}: How can we maintain conversational context while providing accurate responses?
+
+    \item \textbf{RQ6}: What is the optimal architecture for a real-time AI-powered academic assistant?
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+% 1.6 METHODOLOGY
+% ---------------------------------------------------------------------------
+\section{Methodology}
+
+\subsection{Available Methodologies}
+
+Several software development methodologies were considered for this project:
+
+\begin{enumerate}
+    \item \textbf{Waterfall Model}: A sequential approach where each phase must be completed before the next begins. Suitable for well-defined requirements but lacks flexibility.
+
+    \item \textbf{Agile Methodology}: An iterative approach that emphasizes flexibility, collaboration, and customer feedback. Suitable for projects with evolving requirements.
+
+    \item \textbf{Spiral Model}: Combines iterative development with systematic risk assessment. Suitable for complex, high-risk projects.
+
+    \item \textbf{DevOps Approach}: Emphasizes continuous integration and deployment. Suitable for projects requiring frequent updates.
+\end{enumerate}
+
+\subsection{Chosen Methodology}
+
+This project adopts a modified \textbf{Agile} methodology with the following adaptations:
+
+\begin{enumerate}
+    \item \textbf{Sprint-Based Development}: The project was divided into two-week sprints, each focusing on specific features.
+
+    \item \textbf{Continuous Verification}: Iterative checks were performed using local API calls, frontend browser validation, and deployment health probes.
+
+    \item \textbf{Iterative Refinement}: The RAG pipeline underwent multiple iterations based on testing results.
+
+    \item \textbf{User Feedback Integration}: A feedback mechanism was implemented to collect user ratings for continuous improvement.
+\end{enumerate}
+
+\subsection{Reasons for Chosen Methodology}
+
+\begin{enumerate}
+    \item The AI/LLM components required iterative testing and refinement based on response quality.
+
+    \item New features could be added incrementally without disrupting existing functionality.
+
+    \item The frontend design evolved based on user experience testing.
+
+    \item The knowledge base could be expanded progressively as more documents were processed.
+
+    \item Quick feedback cycles allowed for rapid identification and resolution of issues.
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+% 1.7 DEFINITIONS AND ACRONYMS
+% ---------------------------------------------------------------------------
+\section{Definitions and Acronyms}
+
+\begin{longtable}{|p{2in}|p{4in}|}
+\hline
+\textbf{Term} & \textbf{Definition}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Term} & \textbf{Definition}\\
+\hline
+\endhead
+\hline
+AI & Artificial Intelligence\\
+\hline
+API & Application Programming Interface\\
+\hline
+BS & Bachelor of Science\\
+\hline
+ADP & Associate Degree Program\\
+\hline
+MS & Master of Science\\
+\hline
+PhD & Doctor of Philosophy\\
+\hline
+RAG & Retrieval-Augmented Generation\\
+\hline
+LLM & Large Language Model\\
+\hline
+SSE & Server-Sent Events\\
+\hline
+UI & User Interface\\
+\hline
+GUI & Graphical User Interface\\
+\hline
+REST & Representational State Transfer\\
+\hline
+SPA & Single Page Application\\
+\hline
+PDF & Portable Document Format\\
+\hline
+TTL & Time To Live\\
+\hline
+Redis & Remote Dictionary Server\\
+\hline
+Supabase & Open Source Firebase Alternative\\
+\hline
+Pinecone & Vector Database Service\\
+\hline
+OpenAI & Artificial Intelligence Research Lab\\
+\hline
+LangSmith & Observability Platform for LLM Applications\\
+\hline
+FastAPI & Modern Python Web Framework\\
+\hline
+React & JavaScript Library for Building User Interfaces\\
+\hline
+Vite & Next Generation Frontend Tooling\\
+\hline
+Tailwind CSS & Utility-First CSS Framework\\
+\hline
+\end{longtable}
+
+\clearpage
+
+\chapter{SOFTWARE REQUIREMENT SPECIFICATION}
+
+% ---------------------------------------------------------------------------
+% 2.1 STAKEHOLDER CHARACTERISTICS
+% ---------------------------------------------------------------------------
+\section{Stakeholder Characteristics}
+
+The system involves multiple stakeholders with distinct roles and requirements:
+
+\subsection{Primary Stakeholders}
+
+\begin{longtable}{|p{1.5in}|p{2in}|p{2in}|}
+\hline
+\textbf{Stakeholder} & \textbf{Role} & \textbf{Needs}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Stakeholder} & \textbf{Role} & \textbf{Needs}\\
+\hline
+\endhead
+\hline
+Students & Primary Users & Quick access to accurate academic information, easy-to-use interface, source citations\\
+\hline
+Faculty Members & Secondary Users & Ability to update knowledge base, monitor system usage\\
+\hline
+Administrator & System Manager & User management, system monitoring, knowledge base updates\\
+\hline
+University IT Staff & Technical Support & System maintenance, backup management, security monitoring\\
+\hline
+\end{longtable}
+
+% ---------------------------------------------------------------------------
+% 2.2 DOMAIN REQUIREMENTS
+% ---------------------------------------------------------------------------
+\section{Domain Requirements}
+
+The system must comply with the following regulations and policies of the University of Education, Lahore:
+
+\begin{enumerate}
+    \item \textbf{Data Privacy}: Student queries and chat history must be kept confidential.
+
+    \item \textbf{Academic Integrity}: Responses must accurately reflect official university documents.
+
+    \item \textbf{Accessibility}: The system must be accessible to students with disabilities.
+
+    \item \textbf{System Availability}: The system should be available 24/7 during academic semesters.
+
+    \item \textbf{Response Time}: Queries should be processed within acceptable time limits (under 10 seconds).
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+% 2.3 FUNCTIONAL REQUIREMENTS
+% ---------------------------------------------------------------------------
+\section{Functional Requirements}
+
+\subsection{User Management}
+
+\begin{longtable}{|p{0.5in}|p{4in}|}
+\hline
+\textbf{ID} & \textbf{Description}\\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Description}\\
+\hline
+\endhead
+\hline
+FR1 & Users must be able to register using email and password\\
+\hline
+FR2 & Users must be able to login and logout\\
+\hline
+FR3 & Users must be able to view their chat history\\
+\hline
+FR4 & Users must be able to delete their chat history\\
+\hline
+\end{longtable}
+
+\subsection{Query Processing}
+
+\begin{longtable}{|p{0.5in}|p{4in}|}
+\hline
+\textbf{ID} & \textbf{Description}\\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Description}\\
+\hline
+\endhead
+\hline
+FR5 & Users must be able to submit queries in natural language\\
+\hline
+FR6 & The system must process queries in English\\
+\hline
+FR7 & The system must process queries in Roman Urdu\\
+\hline
+FR8 & The system must enhance user queries for better retrieval\\
+\hline
+FR9 & The system must retrieve relevant documents from the knowledge base\\
+\hline
+FR10 & The system must generate natural language responses\\
+\hline
+FR11 & The system must provide source citations with each response\\
+\hline
+FR12 & The system must stream responses in real-time\\
+\hline
+\end{longtable}
+
+\subsection{Knowledge Base Management}
+
+\begin{longtable}{|p{0.5in}|p{4in}|}
+\hline
+\textbf{ID} & \textbf{Description}\\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Description}\\
+\hline
+\endhead
+\hline
+FR13 & The system must maintain three separate knowledge bases\\
+\hline
+FR14 & Users must be able to select the appropriate knowledge base\\
+\hline
+FR15 & The system must support switching between knowledge bases\\
+\hline
+FR16 & The knowledge base must be updatable with new documents\\
+\hline
+\end{longtable}
+
+\subsection{Conversational Memory}
+
+\begin{longtable}{|p{0.5in}|p{4in}|}
+\hline
+\textbf{ID} & \textbf{Description}\\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Description}\\
+\hline
+\endhead
+\hline
+FR17 & The system must remember previous queries in a session\\
+\hline
+FR18 & The system must maintain context across multiple turns\\
+\hline
+FR19 & Sessions must expire after 30 minutes of inactivity\\
+\hline
+FR20 & Each session must support up to 10 conversation turns\\
+\hline
+\end{longtable}
+
+\subsection{Feedback System}
+
+\begin{longtable}{|p{0.5in}|p{4in}|}
+\hline
+\textbf{ID} & \textbf{Description}\\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Description}\\
+\hline
+\endhead
+\hline
+FR21 & Users must be able to provide thumbs up/down feedback\\
+\hline
+FR22 & Feedback must be logged for quality improvement\\
+\hline
+FR23 & The system must support optional feedback comments\\
+\hline
+\end{longtable}
+
+% ---------------------------------------------------------------------------
+% 2.4 NON-FUNCTIONAL REQUIREMENTS
+% ---------------------------------------------------------------------------
+\section{Non-Functional Requirements}
+
+\begin{longtable}{|p{0.5in}|p{1.5in}|p{3in}|}
+\hline
+\textbf{ID} & \textbf{Category} & \textbf{Description}\\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Category} & \textbf{Description}\\
+\hline
+\endhead
+\hline
+NFR1 & Security & User authentication must be secure with encrypted passwords\\
+\hline
+NFR2 & Security & API endpoints must be protected against unauthorized access\\
+\hline
+NFR3 & Security & Sensitive data must be encrypted at rest and in transit\\
+\hline
+NFR4 & Performance & Query response time must be under 10 seconds\\
+\hline
+NFR5 & Performance & The system must support at least 100 concurrent users\\
+\hline
+NFR6 & Performance & Vector retrieval must complete within 2 seconds\\
+\hline
+NFR7 & Scalability & The system must handle growth in users and documents\\
+\hline
+NFR8 & Scalability & New knowledge bases can be added without system modification\\
+\hline
+NFR9 & Reliability & System uptime must be at least 99\% during academic periods\\
+\hline
+NFR10 & Reliability & Automatic failover must handle service disruptions\\
+\hline
+NFR11 & Usability & Interface must be intuitive for non-technical users\\
+\hline
+NFR12 & Usability & Response streaming must provide visual feedback\\
+\hline
+NFR13 & Maintainability & Code must be well-documented and modular\\
+\hline
+NFR14 & Maintainability & Automated tests must cover critical functionality\\
+\hline
+NFR15 & Compatibility & System must work on modern browsers (Chrome, Firefox, Safari, Edge)\\
+\hline
+NFR16 & Compatibility & Mobile-responsive design for smartphone access\\
+\hline
+\end{longtable}
+
+\clearpage
+
+\chapter{ANALYSIS}
+
+% ---------------------------------------------------------------------------
+% 3.1 USE CASE DIAGRAM
+% ---------------------------------------------------------------------------
+\section{Use Case Diagram}
+
+\begin{figure}[h]
+\centering
+%\includegraphics[width=6in]{use_case_diagram.png}
+\caption{Use Case Diagram for UOE AI Assistant}
+\label{fig:use_case}
+\end{figure}
+
+The use case diagram illustrates the interactions between actors (students, faculty, administrators) and the system. Key use cases include:
+
+\begin{enumerate}
+    \item \textbf{Login/Register}: Users create accounts and authenticate
+    \item \textbf{Ask Question}: Users submit natural language queries
+    \item \textbf{View Response}: Users receive streaming responses with source metadata
+    \item \textbf{Select Namespace}: Users choose the appropriate knowledge base
+    \item \textbf{View History}: Users access previous conversations
+    \item \textbf{Provide Feedback}: Users rate response quality
+    \item \textbf{Maintain Knowledge Base}: Project maintainers update document repositories through ingestion scripts
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+% 3.2 USE CASE DESCRIPTIONS
+% ---------------------------------------------------------------------------
+\section{Use Case Descriptions}
+
+\subsection{UC1: User Login/Registration}
+
+\begin{longtable}{|p{1.5in}|p{4in}|}
+\hline
+\textbf{Field} & \textbf{Value}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Field} & \textbf{Value}\\
+\hline
+\endhead
+\hline
+Use Case Name & User Login/Registration\\
+\hline
+Actor & Student, Faculty, Administrator\\
+\hline
+Precondition & User has valid email address\\
+\hline
+Postcondition & User is authenticated and can access the system\\
+\hline
+Flow of Events &
+\begin{enumerate}
+    \item User opens the application
+    \item User clicks Login or Register button
+    \item User enters email and password
+    \item System validates credentials
+    \item System creates session token
+    \item User is redirected to main chat interface
+\end{enumerate}\\
+\hline
+\end{longtable}
+
+\subsection{UC2: Submit Query}
+
+\begin{longtable}{|p{1.5in}|p{4in}|}
+\hline
+\textbf{Field} & \textbf{Value}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Field} & \textbf{Value}\\
+\hline
+\endhead
+\hline
+Use Case Name & Submit Query\\
+\hline
+Actor & Student, Faculty\\
+\hline
+Precondition & User is on chat interface (login is optional)\\
+\hline
+Postcondition & Response is displayed and includes source metadata\\
+\hline
+Flow of Events &
+\begin{enumerate}
+    \item User types question in input field
+    \item User selects knowledge base (optional)
+    \item User presses send button
+    \item System enhances query
+    \item System retrieves relevant documents
+    \item System generates response
+    \item System streams response to user
+    \item Source metadata is attached to the response
+\end{enumerate}\\
+\hline
+\end{longtable}
+
+\subsection{UC3: Switch Knowledge Base}
+
+\begin{longtable}{|p{1.5in}|p{4in}|}
+\hline
+\textbf{Field} & \textbf{Value}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Field} & \textbf{Value}\\
+\hline
+\endhead
+\hline
+Use Case Name & Switch Knowledge Base\\
+\hline
+Actor & Student, Faculty\\
+\hline
+Precondition & User is in chat interface\\
+\hline
+Postcondition & System uses selected namespace for retrieval\\
+\hline
+Flow of Events &
+\begin{enumerate}
+    \item User clicks namespace selector
+    \item System displays available namespaces
+    \item User selects desired namespace
+    \item System updates current context
+    \item Subsequent queries use new namespace
+\end{enumerate}\\
+\hline
+\end{longtable}
+
+% ---------------------------------------------------------------------------
+% 3.3 SYSTEM SEQUENCE DIAGRAM
+% ---------------------------------------------------------------------------
+\section{Sequence Diagram}
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{sequence_diagram.png}
+\caption{Sequence Diagram for Query Processing}
+\label{fig:sequence}
+\end{figure}
+
+The sequence diagram shows the flow of operations when a user submits a query:
+
+\begin{enumerate}
+    \item User submits query through frontend
+    \item Frontend sends request to backend API
+    \item Backend retrieves session memory from Redis
+    \item Query enhancer rewrites the query
+    \item Retriever fetches documents from Pinecone
+    \item If Smart RAG enabled, grader evaluates chunks
+    \item Generator creates response using LLM
+    \item Response is streamed back to frontend
+    \item Memory is updated with new conversation turn
+    \item Sources are attached to response
+\end{enumerate}
+
+\clearpage
+
+\chapter{DESIGN}
+
+% ---------------------------------------------------------------------------
+% 4.1 SYSTEM ARCHITECTURE
+% ---------------------------------------------------------------------------
+\section{System Architecture}
+
+The system follows a three-tier architecture:
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{architecture_diagram.png}
+\caption{System Architecture Diagram}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Presentation Layer (Frontend)}
+\begin{itemize}
+    \item React.js Single Page Application
+    \item Vite build tool
+    \item Tailwind CSS for styling
+    \item Framer Motion for animations
+    \item Zustand for state management
+    \item Supabase for authentication
+\end{itemize}
+
+\subsection{Application Layer (Backend)}
+\begin{itemize}
+    \item FastAPI REST API
+    \item Server-Sent Events for streaming
+    \item RAG Pipeline orchestration
+    \item Query enhancement
+    \item Smart RAG processing
+    \item Redis session management
+\end{itemize}
+
+\subsection{Data Layer}
+\begin{itemize}
+    \item Pinecone vector database
+    \item Redis Cloud for short-term session memory (TTL-based)
+    \item In-process embedding/retrieval caches in backend retriever
+    \item Supabase for persistent storage
+    \item LangSmith for observability
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+% 4.2 DATABASE DESIGN
+% ---------------------------------------------------------------------------
+\section{Database Design}
+
+\subsection{Entity Relationship Diagram}
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{erd_diagram.png}
+\caption{Entity Relationship Diagram}
+\label{fig:erd}
+\end{figure}
+
+The database schema for Supabase includes two main tables:
+
+\begin{enumerate}
+    \item \textbf{conversations}: Stores user conversation metadata
+    \item \textbf{messages}: Stores individual messages within conversations
+\end{enumerate}
+
+The vector database (Pinecone) contains embedded documents organized into three namespaces:
+\begin{itemize}
+    \item bs-adp-schemes: Bachelor's and Associate Degree Programs
+    \item ms-phd-schemes: Master's and Doctoral Programs
+    \item rules-regulations: University Policies and Regulations
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+% 4.3 CLASS DIAGRAM
+% ---------------------------------------------------------------------------
+\section{Class Diagram}
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{class_diagram.png}
+\caption{Class Diagram for Backend RAG Pipeline}
+\label{fig:class}
+\end{figure}
+
+Key classes in the RAG Pipeline:
+
+\begin{enumerate}
+    \item \textbf{RAGPipeline}: Main orchestrator class
+    \item \textbf{QueryEnhancer}: Handles query rewriting
+    \item \textbf{Retriever}: Manages Pinecone retrieval
+    \item \textbf{Generator}: LLM response generation
+    \item \textbf{ConversationMemory}: Redis-backed memory
+    \item \textbf{SmartRAGProcessor}: Self-correcting retrieval
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+% 4.4 DATA FLOW DIAGRAM
+% ---------------------------------------------------------------------------
+\section{Data Flow Diagram}
+
+\subsection{Level 0 (Context Diagram)}
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{dfd_level0.png}
+\caption{Data Flow Diagram Level 0}
+\label{fig:dfd0}
+\end{figure}
+
+The context diagram shows the system as a single process interacting with external entities:
+\begin{itemize}
+    \item Students interact with the system
+    \item Knowledge base provides document data
+    \item External AI services (OpenAI) process requests
+    \item Feedback is logged for improvement
+\end{itemize}
+
+\subsection{Level 1 (Sub Processes)}
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{dfd_level1.png}
+\caption{Data Flow Diagram Level 1}
+\label{fig:dfd1}
+\end{figure}
+
+Level 1 shows detailed processes:
+\begin{enumerate}
+    \item Query Reception and Validation
+    \item Query Enhancement
+    \item Document Retrieval
+    \item Smart RAG Processing (if enabled)
+    \item Response Generation
+    \item Session Memory Update
+    \item Response Streaming
+\end{enumerate}
+
+\clearpage
+
+\chapter{GRAPHICAL USER INTERFACE}
+
+% ---------------------------------------------------------------------------
+% 5.1 INTERFACE DESIGN
+% ---------------------------------------------------------------------------
+\section{Interface Design}
+
+The frontend interface consists of two main views:
+
+\subsection{Landing Page}
+The landing page provides project information and quick access to the chat interface:
+\begin{itemize}
+    \item Hero section with university branding
+    \item Features grid highlighting system capabilities
+    \item Technology stack showcase
+    \item Knowledge bases information
+    \item Team section with developer profiles
+    \item Call-to-action buttons
+\end{itemize}
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{landing_page.png}
+\caption{Landing Page Interface}
+\label{fig:landing}
+\end{figure}
+
+% ---------------------------------------------------------------------------
+% 5.2 CHAT INTERFACE
+% ---------------------------------------------------------------------------
+\section{Chat Interface}
+
+The chat interface is the primary interaction point:
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{chat_interface.png}
+\caption{Chat Interface}
+\label{fig:chat}
+\end{figure}
+
+Key components:
+\begin{enumerate}
+    \item \textbf{Message Bubbles}: Display user queries and AI responses
+    \item \textbf{Input Field}: Text input with auto-resize functionality
+    \item \textbf{Namespace Selector}: Dropdown for knowledge base selection
+    \item \textbf{Response Metadata}: Source citations are attached to assistant messages
+    \item \textbf{Smart Badge}: Indicates Smart RAG status in UI (Pass/Retry)
+    \item \textbf{Thinking Animation}: Shows processing status during generation
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+% 5.3 AUTHENTICATION INTERFACE
+% ---------------------------------------------------------------------------
+\section{Authentication Interface}
+
+Login and registration are handled through a modal:
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=4in]{auth_modal.png}
+\caption{Authentication Modal}
+\label{fig:auth}
+\end{figure}
+
+Features:
+\begin{itemize}
+    \item Email and password fields
+    \item Login and Sign Up tabs
+    \item Password visibility toggle
+    \item Error message display
+    \item Loading state during authentication
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+% 5.4 RESPONSIVE DESIGN
+% ---------------------------------------------------------------------------
+\section{Responsive Design}
+
+The interface is fully responsive across devices:
+
+\begin{longtable}{|p{1.5in}|p{4in}|}
+\hline
+\textbf{Device} & \textbf{Adaptations}\\
+\hline
+Desktop & Full sidebar, multiple columns\\
+\hline
+Tablet & Collapsible sidebar\\
+\hline
+Mobile & Slide-in sidebar, fixed bottom input, single-column chat layout\\
+\hline
+\end{longtable}
+
+\clearpage
+
+\chapter{TESTING}
+
+% ---------------------------------------------------------------------------
+% 6.1 TESTING INTRODUCTION
+% ---------------------------------------------------------------------------
+\section{Testing Introduction}
+
+The testing strategy for this project follows a comprehensive approach to ensure system reliability and correctness.
+
+% ---------------------------------------------------------------------------
+% 6.2 TEST SCENARIOS
+% ---------------------------------------------------------------------------
+\section{Test Scenarios}
+
+\begin{longtable}{|p{0.5in}|p{3in}|p{2in}|}
+\hline
+\textbf{ID} & \textbf{Test Scenario} & \textbf{Expected Result}\\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Test Scenario} & \textbf{Expected Result}\\
+\hline
+\endhead
+\hline
+TS1 & User registration with valid email & Account created successfully\\
+\hline
+TS2 & User login with correct credentials & User authenticated\\
+\hline
+TS3 & User login with wrong password & Error message displayed\\
+\hline
+TS4 & Query submission in English & Response generated in English\\
+\hline
+TS5 & Query submission in Roman Urdu & Response generated with Urdu understanding\\
+\hline
+TS6 & Namespace switching & Documents retrieved from new namespace\\
+\hline
+TS7 & Authenticated chat persistence & Conversation list reloads; messages load when selected\\
+\hline
+TS8 & Feedback submission & Feedback logged successfully\\
+\hline
+TS9 & Source citation metadata & Source metadata included in assistant response payload\\
+\hline
+TS10 & Real-time streaming & Response appears incrementally\\
+\hline
+TS11 & Session memory timeout after 30 minutes & Previous Redis context expires after inactivity\\
+\hline
+TS12 & Turn limit reached (10 user turns) & Input blocked until user starts a new chat\\
+\hline
+\end{longtable}
+
+% ---------------------------------------------------------------------------
+% 6.3 TEST PLAN
+% ---------------------------------------------------------------------------
+\section{Test Plan}
+
+\subsection{Testing Scope}
+\begin{itemize}
+    \item API contract verification for FastAPI endpoints
+    \item Frontend workflow verification in browser (chat, namespace switch, auth modal)
+    \item Persistence verification for Supabase conversation/message tables
+    \item Smart RAG and tracing verification through logs and LangSmith
+    \item Deployment configuration verification (Render + Vercel files)
+\end{itemize}
+
+\subsection{Testing Environment}
+\begin{itemize}
+    \item Development: Local machine (FastAPI on port 8000, Vite frontend)
+    \item Deployment targets: Render blueprint for backend, Vercel configuration for frontend
+    \item External services: Pinecone, Redis Cloud, Supabase, OpenAI, LangSmith
+\end{itemize}
+
+\subsection{Testing Tools}
+\begin{longtable}{|p{1.5in}|p{4in}|}
+\hline
+\textbf{Tool} & \textbf{Purpose}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Tool} & \textbf{Purpose}\\
+\hline
+\endhead
+\hline
+FastAPI/Uvicorn logs & Runtime API diagnostics and error tracing\\
+\hline
+Browser DevTools & Frontend behavior verification and network inspection\\
+\hline
+cURL/Postman-style HTTP calls & Endpoint and payload validation\\
+\hline
+Supabase SQL Editor/Dashboard & Persistence and RLS policy checks\\
+\hline
+LangSmith & Trace inspection and feedback linkage validation\\
+\hline
+\end{longtable}
+
+% ---------------------------------------------------------------------------
+% 6.4 TEST CASE SPECIFICATIONS
+% ---------------------------------------------------------------------------
+\section{Test Case Specifications}
+
+\subsection{Black Box Testing}
+
+\begin{longtable}{|p{0.5in}|p{1.5in}|p{1.5in}|p{1.5in}|}
+\hline
+\textbf{ID} & \textbf{Description} & \textbf{Input} & \textbf{Expected Output}\\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Description} & \textbf{Input} & \textbf{Expected Output}\\
+\hline
+\endhead
+\hline
+BB1 & Email/password auth test & Valid credentials in auth modal & Supabase session set; user state populated\\
+\hline
+BB2 & Guest query test & Query without logging in & Chat request still processed successfully\\
+\hline
+BB3 & Namespace switch test & Select ``Rules \& Regulations'' & Payload namespace switches to \texttt{rules}\\
+\hline
+BB4 & Streaming output test & Submit long query with stream endpoint & Tokens arrive incrementally via SSE\\
+\hline
+BB5 & Authenticated persistence test & Signed-in user sends messages & Conversations/messages saved to Supabase tables\\
+\hline
+BB6 & Feedback test & Click thumbs up on message with \texttt{run\_id} & \texttt{/api/feedback} receives score and logs result\\
+\hline
+\end{longtable}
+
+\subsection{White Box Testing}
+
+\begin{longtable}{|p{0.5in}|p{1.5in}|p{1.5in}|p{1.5in}|}
+\hline
+\textbf{ID} & \textbf{Description} & \textbf{Input} & \textbf{Expected Output}\\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Description} & \textbf{Input} & \textbf{Expected Output}\\
+\hline
+\endhead
+\hline
+WB1 & Stream API contract & \texttt{/api/chat/stream} & Emits metadata event, token events, and \texttt{[DONE]} sentinel\\
+\hline
+WB2 & Non-stream API contract & \texttt{/api/chat} & Returns \texttt{answer}, \texttt{sources}, \texttt{enhanced\_query}, \texttt{run\_id}, \texttt{smart\_info}\\
+\hline
+WB3 & Redis memory policy & Memory operations & Stores max 10 turns and applies 30-minute TTL\\
+\hline
+WB4 & Smart RAG retry bounds & Smart config + pipeline loop & Max three retries after initial retrieval\\
+\hline
+WB5 & Namespace mapping test & Namespace IDs & Maps \texttt{bs-adp/ms-phd/rules} to Pinecone namespaces\\
+\hline
+WB6 & Feedback durability test & LangSmith unavailable case & Feedback still appended to local \texttt{feedback\_log.jsonl}\\
+\hline
+\end{longtable}
+
+% ---------------------------------------------------------------------------
+% 6.5 TEST RESULTS
+% ---------------------------------------------------------------------------
+\section{Verification Status}
+
+\begin{longtable}{|p{0.5in}|p{2in}|p{1in}|p{1.5in}|}
+\hline
+\textbf{ID} & \textbf{Verification Item} & \textbf{Status} & \textbf{Evidence}\\
+\hline
+\endfirsthead
+\hline
+\textbf{ID} & \textbf{Verification Item} & \textbf{Status} & \textbf{Evidence}\\
+\hline
+\endhead
+\hline
+V1 & SSE stream contract & Implemented & \texttt{backend/main.py}, \texttt{frontend/src/utils/api.js}\\
+\hline
+V2 & Non-stream chat API contract & Implemented & \texttt{/api/chat} response model in \texttt{backend/main.py}\\
+\hline
+V3 & Redis session memory policy & Implemented & \texttt{backend/rag\_pipeline/memory.py}\\
+\hline
+V4 & Smart RAG retry loop & Implemented & \texttt{backend/rag\_pipeline/smart\_rag/config.py}, \texttt{pipeline.py}\\
+\hline
+V5 & Supabase chat persistence (authenticated) & Implemented & \texttt{frontend/src/lib/chatPersistence.js}, \texttt{supabase\_schema.sql}\\
+\hline
+V6 & Feedback API + local fallback log & Implemented & \texttt{backend/main.py}, \texttt{feedback\_log.jsonl}\\
+\hline
+\end{longtable}
+
+\bigskip
+\textbf{Note}: The repository does not currently include an automated unit/integration/E2E test suite. The verification table above reflects code-level traceability and manual endpoint/workflow checks.
+
+\clearpage
+
+\chapter{CONCLUSION AND FUTURE WORK}
+
+% ---------------------------------------------------------------------------
+% 7.1 CONCLUSION
+% ---------------------------------------------------------------------------
+\section{Conclusion}
+
+This project successfully developed an AI-Powered Academic Assistant for the University of Education, Lahore. The system addresses the challenges faced by students in accessing accurate academic information efficiently.
+
+\subsection{Achievements}
+
+\begin{enumerate}
+    \item \textbf{Functional System}: A fully operational RAG-based AI assistant that processes queries in English and Roman Urdu.
+
+    \item \textbf{Self-Correcting Retrieval}: Implemented Smart RAG that automatically improves retrieval quality through chunk grading, query rewriting, and retry mechanisms.
+
+    \item \textbf{Real-Time Streaming}: Implemented SSE token streaming for incremental response rendering in the chat interface.
+
+    \item \textbf{Comprehensive Knowledge Base}: Organized retrieval across three namespaces (\texttt{bs-adp-schemes}, \texttt{ms-phd-schemes}, \texttt{rules-regulations}) with 141 processed PDF files recorded in \texttt{backend/Data\_Ingestion/processed\_files.json}.
+
+    \item \textbf{Modern User Interface}: Designed and implemented a visually appealing dark-themed interface with smooth animations.
+
+    \item \textbf{Conversational Memory}: Implemented Redis-backed session management supporting 10-turn conversations.
+
+    \item \textbf{Feedback System}: Added thumbs up/down feedback submission linked to trace \texttt{run\_id}.
+
+    \item \textbf{Source Attribution Data}: Backend responses include source metadata (file, page, score, course code, department).
+\end{enumerate}
+
+\subsection{Results}
+
+The implemented system delivers a working end-to-end flow: namespace-aware retrieval, optional Smart RAG refinement, SSE streaming, Redis session memory, Supabase chat persistence for authenticated users, and feedback logging through \texttt{/api/feedback}. Quantitative accuracy and latency benchmarking remain future evaluation tasks.
+
+% ---------------------------------------------------------------------------
+% 7.2 FUTURE WORK
+% ---------------------------------------------------------------------------
+\section{Future Work}
+
+While the current system provides comprehensive functionality, there are several avenues for future enhancement:
+
+\begin{enumerate}
+    \item \textbf{Mobile Application}: Develop native mobile applications for iOS and Android platforms to improve accessibility.
+
+    \item \textbf{Artificial Intelligence Enhancements}:
+    \begin{itemize}
+        \item Implement more advanced language models
+        \item Add support for voice queries
+        \item Integrate image-based document queries
+    \end{itemize}
+
+    \item \textbf{Expanded Knowledge Base}:
+    \begin{itemize}
+        \item Add more university departments and programs
+        \item Include multimedia content
+        \item Regular updates with new academic materials
+    \end{itemize}
+
+    \item \textbf{Cloud Operations Enhancements}:
+    \begin{itemize}
+        \item Improve current Render/Vercel deployment with environment-specific configurations
+        \item Implement auto-scaling
+        \item Add load balancing
+    \end{itemize}
+
+    \item \textbf{Analytics Dashboard}:
+    \begin{itemize}
+        \item Track user queries and patterns
+        \item Identify frequently asked questions
+        \item Monitor system performance metrics
+    \end{itemize}
+
+    \item \textbf{Multi-language Support}:
+    \begin{itemize}
+        \item Add support for complete Urdu language
+        \item Include Punjabi and other regional languages
+    \end{itemize}
+
+    \item \textbf{Integration with University Systems}:
+    \begin{itemize}
+        \item Connect with LMS (Learning Management System)
+        \item Integrate with student portals
+        \item Link with examination systems
+    \end{itemize}
+
+    \item \textbf{Chatbot for Admission}: Specialized bot for new student admissions and guidance.
+\end{enumerate}
+
+\bigskip
+In conclusion, this project demonstrates the potential of AI in transforming academic information accessibility. With continued development and integration, the system can significantly enhance the student experience at the University of Education, Lahore.
+
+\clearpage
+
+% =============================================================================
+% REFERENCES
+% =============================================================================
+\chapter{REFERENCES}
+
+\bigskip
+\textbf{Journal Articles}
+
+\bigskip
+[1] Brown, T., et al. (2020). ``Language Models are Few-Shot Learners.'' \textit{Advances in Neural Information Processing Systems}, 33, 1877-1901.
+
+\bigskip
+[2] Lewis, P., et al. (2020). ``Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.'' \textit{Proceedings of NeurIPS}.
+
+\bigskip
+[3] Robertson, S., \& Zaragoza, H. (2009). ``The Probabilistic Relevance Framework: BM25 and Beyond.'' \textit{Foundations and Trends in Information Retrieval}, 3(4), 333-389.
+
+\bigskip
+\textbf{Books}
+
+\bigskip
+[4] Manning, C. D., Raghavan, P., \& Schütze, H. (2008). \textit{Introduction to Information Retrieval}. Cambridge University Press.
+
+\bigskip
+[5] Russell, S., \& Norvig, P. (2020). \textit{Artificial Intelligence: A Modern Approach} (4th ed.). Pearson.
+
+\bigskip
+[6] Goodfellow, I., Bengio, Y., \& Courville, A. (2016). \textit{Deep Learning}. MIT Press.
+
+\bigskip
+\textbf{Web Resources}
+
+\bigskip
+[7] FastAPI Documentation. (2024). Retrieved from \url{https://fastapi.tiangolo.com/}
+
+\bigskip
+[8] Pinecone Documentation. (2024). Retrieved from \url{https://docs.pinecone.io/}
+
+\bigskip
+[9] React Documentation. (2024). Retrieved from \url{https://react.dev/}
+
+\bigskip
+[10] OpenAI API Documentation. (2024). Retrieved from \url{https://platform.openai.com/docs/}
+
+\bigskip
+[11] University of Education, Lahore. (2024). Retrieved from \url{https://ue.edu.pk/}
+
+\clearpage
+
+% =============================================================================
+% APPENDICES
+% =============================================================================
+\appendix
+\chapter{APPENDIX A: ENVIRONMENT VARIABLES}
+
+\section{Backend Environment Variables}
+
+\begin{longtable}{|p{2in}|p{4in}|}
+\hline
+\textbf{Variable} & \textbf{Description}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Variable} & \textbf{Description}\\
+\hline
+\endhead
+\hline
+OPENAI\_API\_KEY & OpenAI API key (used for GPT-4o-mini generation and text-embedding-3-large embeddings)\\
+\hline
+PINECONE\_API\_KEY & Pinecone vector database API key\\
+\hline
+PINECONE\_INDEX\_NAME & Name of the Pinecone index\\
+\hline
+REDIS\_HOST & Redis Cloud host URL\\
+\hline
+REDIS\_PORT & Redis connection port\\
+\hline
+REDIS\_USERNAME & Redis username (default: \texttt{default})\\
+\hline
+REDIS\_PASSWORD & Redis authentication password\\
+\hline
+MEMORY\_MAX\_TURNS & Maximum remembered conversation turns (default: 10)\\
+\hline
+MEMORY\_TTL\_SECONDS & Session memory TTL in seconds (default: 1800)\\
+\hline
+LANGSMITH\_TRACING / LANGCHAIN\_TRACING\_V2 & Enable LangSmith tracing (true/false)\\
+\hline
+LANGSMITH\_API\_KEY / LANGCHAIN\_API\_KEY & LangSmith API key for observability\\
+\hline
+LANGSMITH\_PROJECT / LANGCHAIN\_PROJECT & Trace project name\\
+\hline
+LANGSMITH\_ENDPOINT / LANGCHAIN\_ENDPOINT & LangSmith endpoint URL\\
+\hline
+DEFAULT\_TOP\_K\_RETRIEVE & Default retrieval count per query (default: 5)\\
+\hline
+OPENAI\_CHAT\_MODEL & Chat model name (default: \texttt{gpt-4o-mini})\\
+\hline
+OPENAI\_EMBEDDING\_MODEL & Embedding model name (default: \texttt{text-embedding-3-large})\\
+\hline
+PORT & Server port number (default: 8000)\\
+\hline
+\end{longtable}
+
+\section{Frontend Environment Variables}
+
+\begin{longtable}{|p{2in}|p{4in}|}
+\hline
+\textbf{Variable} & \textbf{Description}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Variable} & \textbf{Description}\\
+\hline
+\endhead
+\hline
+VITE\_SUPABASE\_URL & Supabase project URL\\
+\hline
+VITE\_SUPABASE\_ANON\_KEY & Supabase anonymous key\\
+\hline
+VITE\_API\_URL & Backend API base URL (falls back to \texttt{/api} in local development)\\
+\hline
+\end{longtable}
+
+\chapter{APPENDIX B: API DOCUMENTATION}
+
+\section{API Endpoints}
+
+\begin{longtable}{|p{2in}|p{4in}|}
+\hline
+\textbf{Endpoint} & \textbf{Purpose}\\
+\hline
+GET / & Service info and version\\
+\hline
+GET /health & Liveness probe\\
+\hline
+GET /api/namespaces & Available knowledge base options\\
+\hline
+POST /api/chat & Non-streaming chat response\\
+\hline
+POST /api/chat/stream & Streaming chat response via SSE\\
+\hline
+POST /api/feedback & Thumbs up/down feedback linked to a run ID\\
+\hline
+\end{longtable}
+
+\subsection{GET /health}
+\textbf{Response}:
+\begin{lstlisting}
+{
+  "status": "healthy"
+}
+\end{lstlisting}
+
+\subsection{POST /api/chat}
+\textbf{Request}:
+\begin{lstlisting}
+{
+  "query": "What are BS admission requirements?",
+  "namespace": "bs-adp",
+  "enhance_query": true,
+  "enable_smart": false,
+  "top_k_retrieve": 5,
+  "session_id": "optional-uuid"
+}
+\end{lstlisting}
+
+\textbf{Response}:
+\begin{lstlisting}
+{
+  "answer": "...",
+  "sources": [
+    {"file": "...", "page": 12, "score": 0.87, "course_code": "", "department": ""}
+  ],
+  "enhanced_query": "...",
+  "namespace": "bs-adp",
+  "session_id": "...",
+  "run_id": "...",
+  "smart_info": null
+}
+\end{lstlisting}
+
+\subsection{POST /api/chat/stream}
+\textbf{Response (SSE Events)}:
+\begin{lstlisting}
+data: {"type":"metadata","sources":[...],"enhanced_query":"...","namespace":"bs-adp","session_id":"...","run_id":"...","smart_info":{...}}
+data: {"type":"token","content":"The"}
+data: {"type":"token","content":" admission"}
+...
+data: [DONE]
+\end{lstlisting}
+
+\subsection{GET /api/namespaces}
+\textbf{Response}:
+\begin{lstlisting}
+{
+  "namespaces": [
+    {"id":"bs-adp","name":"BS / ADP Programs","description":"..."},
+    {"id":"ms-phd","name":"MS / PhD Programs","description":"..."},
+    {"id":"rules","name":"Rules & Regulations","description":"..."}
+  ]
+}
+\end{lstlisting}
+
+\subsection{POST /api/feedback}
+\textbf{Request}:
+\begin{lstlisting}
+{
+  "run_id": "langsmith-run-id",
+  "score": 1,
+  "comment": "optional"
+}
+\end{lstlisting}
+
+\textbf{Response}:
+\begin{lstlisting}
+{
+  "status": "ok"
+}
+\end{lstlisting}
+
+\chapter{APPENDIX C: SCREENSHOTS}
+
+\section{System Screenshots}
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{screenshot_landing.png}
+\caption{Landing Page}
+\end{figure}
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{screenshot_chat.png}
+\caption{Chat Interface}
+\end{figure}
+
+\begin{figure}[h]
+%\centering
+%\includegraphics[width=6in]{screenshot_sources.png}
+%\caption{Source Citations Panel}
+\end{figure}
+
+\chapter{APPENDIX D: PROJECT TIMELINE}
+
+\section{Project Schedule}
+
+\begin{longtable}{|p{1.5in}|p{2in}|p{2in}|}
+\hline
+\textbf{Phase} & \textbf{Activity} & \textbf{Duration}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Phase} & \textbf{Activity} & \textbf{Duration}\\
+\hline
+\endhead
+\hline
+Phase 1 & Requirement Gathering & 2 weeks\\
+\hline
+Phase 2 & System Design & 2 weeks\\
+\hline
+Phase 3 & Backend Development & 6 weeks\\
+\hline
+Phase 4 & Frontend Development & 4 weeks\\
+\hline
+Phase 5 & Integration Testing & 2 weeks\\
+\hline
+Phase 6 & Documentation & 2 weeks\\
+\hline
+Phase 7 & Final Presentation & 1 week\\
+\hline
+\end{longtable}
+
+\bigskip
+Total Duration: 19 weeks
+
+\chapter{APPENDIX E: TECHNICAL SPECIFICATIONS}
+
+\section{Hardware Requirements}
+
+\begin{longtable}{|p{2in}|p{4in}|}
+\hline
+\textbf{Component} & \textbf{Specification}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Component} & \textbf{Specification}\\
+\hline
+\endhead
+\hline
+Processor & Intel Core i5 or equivalent\\
+\hline
+RAM & 8 GB minimum\\
+\hline
+Storage & 256 GB SSD\\
+\hline
+Internet & Stable broadband connection\\
+\hline
+\end{longtable}
+
+\section{Software Requirements}
+
+\begin{longtable}{|p{2in}|p{4in}|}
+\hline
+\textbf{Software} & \textbf{Version}\\
+\hline
+\endfirsthead
+\hline
+\textbf{Software} & \textbf{Version}\\
+\hline
+\endhead
+\hline
+Python & 3.12+\\
+\hline
+Node.js & 18+\\
+\hline
+React & 18.3.1\\
+\hline
+FastAPI & 0.115+\\
+\hline
+Pinecone & 3.0+\\
+\hline
+Redis & 5.0+\\
+\hline
+\end{longtable}
+
+% =============================================================================
+% END OF DOCUMENT
+% =============================================================================
+
+\end{document}

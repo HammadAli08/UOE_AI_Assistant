@@ -5,8 +5,9 @@ Production-grade RAG pipeline for UOE Lahore Academic AI Assistant.
 
 Components:
 - QueryEnhancer: Optimizes queries for vector search
-- Retriever: Fetches documents from Pinecone
-- Generator: Produces final answers using GPT-4o
+- Retriever: Fetches documents from Pinecone with ensemble retrieval
+  (Dense semantic + BM25 sparse scoring fused via Reciprocal Rank Fusion)
+- Generator: Produces final answers using GPT-4o-mini
 - ConversationMemory: Redis-backed short-term session memory
 - SmartRAGProcessor: Self-correcting retrieval with best-effort answering (3 retries)
 - RAGPipeline: Orchestrates the full pipeline
