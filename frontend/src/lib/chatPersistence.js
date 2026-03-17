@@ -58,7 +58,8 @@ export async function saveMessage(conversationId, msg) {
       content: msg.content,
       sources: msg.sources || [],
       enhanced_query: msg.enhancedQuery || null,
-      smart_info: msg.smartInfo || null,
+      // `smart_info` column exists in the DB schema; map agentic info into it.
+      smart_info: msg.agenticInfo || null,
       run_id: msg.runId || null,
     })
     .select()

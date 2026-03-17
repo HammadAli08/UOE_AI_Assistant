@@ -13,7 +13,7 @@ const team = [
     badge: 'Group Leader',
     photo: '/Hammad Ali.png',
     icon: Crown,
-    desc: 'Architected the self-correcting RAG pipeline, Smart retrieval logic, and LangSmith observability layer powering every answer.',
+    desc: 'Architected the self-correcting RAG pipeline, Agentic retrieval logic, and LangSmith observability layer powering every answer.',
     accent: 'from-mustard-500 to-mustard-400',
     glow: 'rgba(200,185,74,0.12)',
   },

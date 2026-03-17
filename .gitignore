@@ -102,6 +102,15 @@ htmlcov/
 feedback_log.jsonl
 server.log
 firebase-debug.log
+ingestion.log
+Data_Ingestion/ingestion.log
+Data_Ingestion/about_university_ingestion.log
+Data_Ingestion/processed_files.json
+Data/about_university.json
+Data/about_progress.json
+Data/scheme_of_study.json
+backend/Data/
+frontend/dist/
 
 # ── 🚀 Deployment & Build ──
 .vercel/

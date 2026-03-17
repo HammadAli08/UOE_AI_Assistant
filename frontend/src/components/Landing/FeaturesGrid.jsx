@@ -11,7 +11,7 @@ const features = [
   {
     icon: Brain,
     num: '01',
-    title: 'Smart RAG',
+    title: 'Agentic RAG',
     desc: 'Self-correcting retrieval that grades, rewrites, and retries up to 6 times — adapting its strategy until it finds the right answer.',
     gradient: 'from-amber-400 via-yellow-500 to-mustard-500',
     iconBg: 'bg-amber-500/10',

@@ -53,6 +53,7 @@ class QueryEnhancer:
                 self._prompt = (
                     "Rewrite the user's query for optimal vector database search. "
                     "Keep it SHORT (under 20 words). Extract key academic terms. "
+                    "Do NOT add institution names or cities; corpus is already scoped. "
                     "Remove filler words. Output ONLY the enhanced query."
                 )
         return self._prompt

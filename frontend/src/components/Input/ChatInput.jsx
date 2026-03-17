@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────
-// ChatInput — glass panel input with SmartRAG toggle + namespace picker
+// ChatInput — glass panel input with Agentic RAG toggle + namespace picker
 // ──────────────────────────────────────────
 import { memo, useRef, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,7 +12,7 @@ import { MAX_QUERY_LENGTH, MAX_TURNS, NAMESPACES } from '@/constants';
 function ChatInput({ onSend, onStop, isStreaming }) {
   const [value, setValue] = useState('');
   const [showNsPicker, setShowNsPicker] = useState(false);
-  const [smartHovered, setSmartHovered] = useState(false);
+  const [agenticHovered, setAgenticHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef(null);
   const nsPickerRef = useRef(null);
@@ -102,8 +102,8 @@ function ChatInput({ onSend, onStop, isStreaming }) {
         : namespace === 'rules' ? 'Ask about university exams, regulations, and grading...'
           : 'Ask about your academic programs…';
 
-  const toggleSmart = () => {
-    updateSettings({ enableSmart: !settings.enableSmart });
+  const toggleAgentic = () => {
+    updateSettings({ enableAgentic: !settings.enableAgentic });
   };
 
   return (
@@ -153,7 +153,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
             className="w-full bg-transparent text-sm text-cream font-body placeholder:text-mist/70 px-4 pt-4 pb-2 resize-none outline-none min-h-[48px] max-h-[160px] disabled:opacity-40 disabled:cursor-not-allowed"
           />
 
-          {/* Bottom row inside panel: namespace · char count · SmartRAG pill · Send */}
+          {/* Bottom row inside panel: namespace · char count · Agentic RAG pill · Send */}
           <div className="flex items-center justify-between px-3 pb-3">
             {/* Left: namespace selector + char counter */}
             <div className="flex items-center gap-2">
@@ -236,22 +236,22 @@ function ChatInput({ onSend, onStop, isStreaming }) {
               )}
             </div>
 
-            {/* Right: Smart toggle + Send */}
+            {/* Right: Agentic toggle + Send */}
             <div className="flex items-center gap-2.5">
-              {/* ── SmartRAG pill toggle with enable animation ── */}
+              {/* ── Agentic RAG pill toggle with enable animation ── */}
               <div
                 className="relative"
-                onMouseEnter={() => setSmartHovered(true)}
-                onMouseLeave={() => setSmartHovered(false)}
+                onMouseEnter={() => setAgenticHovered(true)}
+                onMouseLeave={() => setAgenticHovered(false)}
               >
                 <motion.button
-                  onClick={toggleSmart}
-                  aria-pressed={settings.enableSmart}
-                  aria-label={settings.enableSmart ? 'Disable Smart RAG (self-correcting retrieval)' : 'Enable Smart RAG (self-correcting retrieval)'}
+                  onClick={toggleAgentic}
+                  aria-pressed={settings.enableAgentic}
+                  aria-label={settings.enableAgentic ? 'Disable Agentic RAG (autonomous retrieval)' : 'Enable Agentic RAG (autonomous retrieval)'}
                   className={clsx(
                     'group flex items-center gap-1.5 px-3.5 py-[7px] rounded-full text-xs font-medium',
                     'border transition-all duration-500 ease-out select-none',
-                    settings.enableSmart
+                    settings.enableAgentic
                       ? 'bg-mustard-500/[0.14] text-mustard-400 border-mustard-500/25 shadow-glow-sm'
                       : 'bg-white/[0.03] text-mist border-white/[0.08] hover:border-white/[0.14] hover:text-ash'
                   )}
@@ -260,17 +260,17 @@ function ChatInput({ onSend, onStop, isStreaming }) {
                   <Zap
                     className={clsx(
                       'w-3.5 h-3.5 transition-all duration-500',
-                      settings.enableSmart ? 'text-mustard-400 animate-smart-on' : ''
+                      settings.enableAgentic ? 'text-mustard-400 animate-agentic-on' : ''
                     )}
                   />
-                  <span className="tracking-wide">Smart</span>
+                  <span className="tracking-wide">Agentic</span>
                   {/* Animated glow dot */}
                   <motion.span
-                    animate={settings.enableSmart ? { scale: [1, 1.2, 1] } : {}}
+                    animate={settings.enableAgentic ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ duration: 1, repeat: Infinity }}
                     className={clsx(
                       'w-[6px] h-[6px] rounded-full transition-all duration-500',
-                      settings.enableSmart
+                      settings.enableAgentic
                         ? 'bg-mustard-400 shadow-[0_0_8px_rgba(200,185,74,0.7)]'
                         : 'bg-mist/30'
                     )}
@@ -279,7 +279,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
 
                 {/* Tooltip */}
                 <AnimatePresence>
-                  {smartHovered && (
+                  {agenticHovered && (
                     <motion.div
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -292,7 +292,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
                     >
                       <div className="flex items-center gap-2">
                         <Clock className="w-3 h-3 text-mustard-500 flex-shrink-0" />
-                        <span>Self-correcting retrieval · Takes a little longer</span>
+                        <span>Autonomous retrieval · Classifies intent first</span>
                       </div>
                       {/* Arrow */}
                       <div

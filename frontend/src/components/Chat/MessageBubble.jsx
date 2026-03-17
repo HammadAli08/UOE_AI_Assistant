@@ -7,7 +7,6 @@ import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Copy, Check, ThumbsUp, ThumbsDown, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
-import SmartBadge from '@/components/SmartRAG/SmartBadge';
 import useChatStore from '@/store/useChatStore';
 import { submitFeedback } from '@/utils/api';
 
@@ -16,7 +15,6 @@ function MessageBubble({ message }) {
   const [copied, setCopied] = useState(false);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackBurst, setFeedbackBurst] = useState(null); // 'up' | 'down' | null
-  const hasSmartInfo = message.smartInfo != null;
 
   // Detect if this is an error message
   const isErrorMessage = !isUser && message.content.includes('Sorry, I encountered an error');
@@ -90,9 +88,7 @@ function MessageBubble({ message }) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
       className={clsx(
         'flex gap-2 px-2 sm:px-6 py-3',
         isUser ? 'justify-end' : 'justify-start'
@@ -108,7 +104,6 @@ function MessageBubble({ message }) {
 
       {/* Bubble */}
       <motion.div
-        layout
         className={clsx(
           'max-w-[80vw] sm:max-w-[75%] lg:max-w-[60%] rounded-2xl relative transition-all duration-500',
           isUser
@@ -133,9 +128,6 @@ function MessageBubble({ message }) {
         {/* Bottom bar — assistant only */}
         {!isUser && (
           <div className="flex items-center gap-2.5 mt-3 pt-2.5 border-t border-white/[0.05]">
-            {/* Smart RAG badge */}
-            {hasSmartInfo && <SmartBadge smartInfo={message.smartInfo} />}
-
             {/* Retry button for error messages */}
             {isErrorMessage && (
               <button
@@ -152,6 +144,11 @@ function MessageBubble({ message }) {
             )}
 
             <div className="flex-1" />
+
+            {/* AI disclaimer */}
+            <span className="text-2xs text-mist/60 italic">
+              AI-generated; verify critical info.
+            </span>
 
             {/* ── Feedback buttons ── */}
             <motion.div
@@ -253,7 +250,15 @@ function MessageBubble({ message }) {
 
             {/* Timestamp */}
             <span className="text-2xs text-mist/60">
-              {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {(() => {
+                try {
+                  const d = new Date(message.timestamp || message.created_at);
+                  if (isNaN(d.valueOf())) return '';
+                  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                } catch {
+                  return '';
+                }
+              })()}
             </span>
           </div>
         )}
@@ -266,7 +271,7 @@ function MessageBubble({ message }) {
           <User className="w-4 h-4 text-ash" />
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 

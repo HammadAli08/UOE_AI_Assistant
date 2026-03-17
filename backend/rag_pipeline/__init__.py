@@ -9,7 +9,8 @@ Components:
   (Dense semantic + BM25 sparse scoring fused via Reciprocal Rank Fusion)
 - Generator: Produces final answers using GPT-4o-mini
 - ConversationMemory: Redis-backed short-term session memory
-- SmartRAGProcessor: Self-correcting retrieval with best-effort answering (3 retries)
+- AgenticRAGGraph: Autonomous decision-making retrieval with intent routing,
+  query decomposition, self-correcting retrieval, and hallucination guard
 - RAGPipeline: Orchestrates the full pipeline
 """
 
@@ -18,11 +19,10 @@ from .query_enhancer import QueryEnhancer, get_query_enhancer
 from .retriever import Retriever, get_retriever
 from .generator import Generator, get_generator
 from .memory import ConversationMemory, get_memory
-from .smart_rag import (
-    SmartRAGProcessor,
-    SmartChunkGrader,
-    SmartQueryRewriter,
-    get_smart_processor,
+from .agentic_rag import (
+    AgenticRAGGraph,
+    get_agentic_graph,
+    AGENTIC_RAG_CONFIG,
 )
 from .pipeline import RAGPipeline, get_pipeline
 
@@ -36,9 +36,7 @@ __all__ = [
     "Retriever",
     "Generator",
     "ConversationMemory",
-    "SmartRAGProcessor",
-    "SmartChunkGrader",
-    "SmartQueryRewriter",
+    "AgenticRAGGraph",
     "RAGPipeline",
 
     # Factory functions
@@ -46,6 +44,9 @@ __all__ = [
     "get_retriever",
     "get_generator",
     "get_memory",
-    "get_smart_processor",
+    "get_agentic_graph",
     "get_pipeline",
+
+    # Config
+    "AGENTIC_RAG_CONFIG",
 ]

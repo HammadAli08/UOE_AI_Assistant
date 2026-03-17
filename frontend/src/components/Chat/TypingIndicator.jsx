@@ -53,9 +53,9 @@ function ProgressBar({ progress, color }) {
 }
 
 function TypingIndicator({ mode = 'standard' }) {
-  const phaseColor = mode === 'smart' ? '#A78BFA' : '#C8B94A';
-  const labelText = mode === 'smart' ? 'Analyzing your question...' : 'Thinking...';
-  const progress = mode === 'smart' ? 25 : 50;
+  const phaseColor = mode === 'agentic' ? '#A78BFA' : '#C8B94A';
+  const labelText = mode === 'agentic' ? 'Analyzing your question...' : 'Thinking...';
+  const progress = mode === 'agentic' ? 25 : 50;
 
   return (
     <motion.div

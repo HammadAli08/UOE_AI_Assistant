@@ -2,20 +2,18 @@
 RAG Pipeline Orchestrator
 
 Main pipeline class that orchestrates all RAG components with short-term
-conversation memory, streaming, LangSmith tracing, and optional Smart RAG.
+conversation memory, streaming, LangSmith tracing, and Agentic RAG.
 
-Smart RAG (when enabled via ``enable_smart=True``):
-  1. Enhance the query, retrieve chunks from vector DB
-  2. LLM grades every chunk for relevance
-  3. If chunks are good enough → generate answer
-  4. If not → rewrite query and re-retrieve (up to 6 retries)
-  5. Accumulates ALL relevant chunks found across every iteration
-  6. Early exit when enough high-quality chunks collected
-  7. After 3 retries → answer with ALL relevant chunks collected (best-effort)
-  8. If very few chunks → detect if clarification from user would help
-  9. Only uses "sorry" fallback when literally zero chunks exist
+Agentic RAG (when enabled via ``enable_agentic=True``):
+  1. Classify intent (DIRECT / RETRIEVE / DECOMPOSE / CLARIFY)
+  2. For RETRIEVE: enhance → retrieve → rerank → grade → retry loop
+  3. For DECOMPOSE: split into sub-queries, each through the retrieval loop
+  4. For DIRECT: answer without document retrieval
+  5. For CLARIFY: ask user for more specific details
+  6. Post-generation hallucination check verifies grounding
+  7. Full decision trail is returned for observability
 
-When Smart RAG is disabled the pipeline works as standard single-step RAG:
+When Agentic RAG is disabled the pipeline works as standard single-step RAG:
   retrieve → generate.
 """
 
@@ -36,11 +34,12 @@ from .query_enhancer import get_query_enhancer
 from .retriever import get_retriever
 from .generator import get_generator
 from .memory import get_memory
-from .smart_rag import (
-    get_smart_processor,
-    get_fallback_message as get_smart_fallback_message,
-    SMART_RAG_CONFIG,
+from .agentic_rag import (
+    get_agentic_graph,
+    AgentState,
+    AGENTIC_RAG_CONFIG,
 )
+from .agentic_rag.config import NO_RESULTS_MESSAGE
 
 logger = logging.getLogger(__name__)
 
@@ -69,14 +68,16 @@ def _extract_sources(docs: List[Dict]) -> List[Dict]:
 
 class RAGPipeline:
     """Production RAG pipeline with namespace isolation, memory, streaming,
-    and optional Smart RAG (self-correcting retrieval with best-effort answering)."""
+    and Agentic RAG (autonomous intent routing with self-correcting retrieval)."""
 
     def __init__(self):
         self.query_enhancer = get_query_enhancer()
         self.retriever = get_retriever()
         self.generator = get_generator()
         self.memory = get_memory()
-        self.smart_processor = get_smart_processor()
+        self.agentic_graph = get_agentic_graph(
+            self.retriever, self.generator, self.query_enhancer,
+        )
 
     # ── Namespace resolution ─────────────────────────────────────────
 
@@ -88,139 +89,28 @@ class RAGPipeline:
         valid = list(NAMESPACE_MAP.keys())
         raise ValueError(f"Invalid namespace '{namespace}'. Valid options: {valid}")
 
-    # ── Smart retrieval loop (best-effort) ────────────────────
+    # ── Agentic retrieval ─────────────────────────────────────────────
 
-    @traceable(name="rag_pipeline.smart_retrieve", run_type="chain")
-    def _smart_retrieve(
+    def _run_agentic(
         self,
         user_query: str,
         enhanced_query: str,
         pinecone_namespace: str,
         top_k: int,
-    ) -> Dict:
-        """
-        Self-correcting retrieval with best-effort answering:
-          attempt 0  → retrieve with enhanced_query, grade chunks
-          attempt 1+ → rewrite query, retrieve again, grade again
-          After 3 retries → answer with ALL relevant chunks collected
-          If few chunks → check if user should provide more details
-          Zero chunks ever → return fallback "sorry" message
-
-        Returns dict with keys: documents, metrics, query_used, clarification
-        """
-        proc = self.smart_processor
-        max_retries = SMART_RAG_CONFIG["max_retries"]
-        boost = SMART_RAG_CONFIG["retry_top_k_boost"]
-
-        current_query = enhanced_query
-        all_relevant: List[Dict] = []  # Accumulate across ALL attempts
-        all_irrelevant: List[Dict] = []
-        total_retrievals = 0
-        total_graded = 0
-        rewrites: List[Dict] = []
-        seen_ids = set()  # Deduplicate chunks across attempts
-
-        for attempt in range(max_retries + 1):
-            # Retrieve — use more chunks on retries (progressively)
-            retrieve_k = top_k + (boost * attempt)
-            documents = self.retriever.ensemble_retrieve(
-                query=current_query, namespace=pinecone_namespace, top_k=retrieve_k,
-            )
-            total_retrievals += 1
-
-            if not documents:
-                logger.info("Smart attempt %d: zero documents retrieved", attempt)
-                if attempt < max_retries:
-                    current_query = proc.rewrite_query(user_query, all_irrelevant, attempt + 1)
-                    rewrites.append({"attempt": attempt + 1, "rewritten_query": current_query})
-                    continue
-                break
-
-            # Grade against user's original question (not enhanced/rewritten)
-            # so grading matches user intent, not search-expanded terms
-            relevant, irrelevant = proc.grade_chunks(user_query, documents)
-            total_graded += len(documents)
-
-            # Accumulate relevant chunks (deduplicate by ID)
-            for chunk in relevant:
-                chunk_id = chunk.get("id", id(chunk))
-                if chunk_id not in seen_ids:
-                    seen_ids.add(chunk_id)
-                    all_relevant.append(chunk)
-
-            all_irrelevant.extend(irrelevant)
-
-            logger.info(
-                "Smart attempt %d: retrieved=%d, relevant=%d, irrelevant=%d, "
-                "total_relevant=%d, query='%s'",
-                attempt, len(documents), len(relevant), len(irrelevant),
-                len(all_relevant), current_query[:80],
-            )
-
-            # Per-attempt quality gate: this attempt had enough high-quality chunks?
-            if not proc.should_retry(relevant, attempt):
-                logger.info(
-                    "Smart RAG: attempt %d passed quality gate "
-                    "(relevant=%d, min=%d) — stopping",
-                    attempt, len(relevant), proc.min_relevant,
-                )
-                break
-
-            # Cross-attempt check: accumulated enough high-quality chunks overall?
-            if proc.should_stop_early(all_relevant, attempt):
-                logger.info(
-                    "Smart RAG early exit: %d relevant chunks accumulated "
-                    "with sufficient quality (threshold=%d)",
-                    len(all_relevant), proc.early_success,
-                )
-                break
-
-            # Rewrite for the next attempt
-            current_query = proc.rewrite_query(user_query, irrelevant, attempt + 1)
-            rewrites.append({"attempt": attempt + 1, "rewritten_query": current_query})
-
-        # ── Post-loop: clarification detection ───────────────────────
-        clarification = None
-        if len(all_relevant) == 0:
-            # Zero chunks: check if we should ask for clarification
-            clarification = proc.detect_clarification_needed(
-                user_query, all_relevant, all_irrelevant,
-            )
-        elif len(all_relevant) < proc.min_relevant:
-            # Very few chunks: might benefit from user details
-            clarification = proc.detect_clarification_needed(
-                user_query, all_relevant, all_irrelevant,
-            )
-
-        # Best-effort: use ALL relevant chunks collected across attempts
-        # Sort by grade_confidence descending so best chunks are fed to generator first
-        all_relevant.sort(
-            key=lambda c: c.get("grade_confidence", 0.0), reverse=True,
+        chat_history: List[Dict],
+        session_id: str,
+    ) -> AgentState:
+        """Execute the full Agentic RAG graph and return the final state."""
+        state = AgentState(
+            user_query=user_query,
+            namespace=pinecone_namespace,
+            session_id=session_id,
+            chat_history=chat_history,
+            enhanced_query=enhanced_query,
+            top_k=top_k,
         )
-
-        is_best_effort = (
-            len(all_relevant) > 0
-            and len(all_relevant) < proc.min_relevant
-        )
-
-        metrics = proc.build_metrics(
-            total_retrievals=total_retrievals,
-            total_chunks_graded=total_graded,
-            query_rewrites=rewrites,
-            final_relevant_count=len(all_relevant),
-            used_fallback=len(all_relevant) == 0,
-            best_effort=is_best_effort,
-            clarification_asked=clarification is not None,
-        )
-
-        logger.info("Smart RAG metrics: %s", json.dumps(metrics))
-
-        return {
-            "documents": all_relevant,
-            "metrics": metrics,
-            "query_used": current_query,
-            "clarification": clarification,
-        }
+        state = self.agentic_graph.run(state)
+        return state
 
     # ── NON-STREAMING QUERY ──────────────────────────────────────────
 
@@ -229,19 +119,28 @@ class RAGPipeline:
         self, user_query: str, namespace: str, enhance_query: bool = True,
         top_k_retrieve: int = DEFAULT_TOP_K_RETRIEVE,
         session_id: str = "",
-        enable_smart: bool = False,
+        enable_agentic: bool = False,
+        chat_history: List[Dict[str, str]] | None = None,
     ) -> Dict:
         """Execute the full RAG pipeline (non-streaming)."""
         t_start = time.perf_counter()
         pinecone_namespace = self._resolve_namespace(namespace)
 
-        chat_history = []
-        if session_id:
-            chat_history = self.memory.get_history(session_id)
+        # For the aggregated about-university knowledge base, pull a broader set
+        # of chunks to capture full department lists and campus info.
+        if pinecone_namespace == "about-university":
+            top_k_retrieve = max(top_k_retrieve, 18)
+
+        # Prefer explicit history from the client (e.g., when resuming a saved chat).
+        # Fall back to session memory if none is provided.
+        if chat_history is None:
+            chat_history = []
+            if session_id:
+                chat_history = self.memory.get_history(session_id)
 
         # ── Query enhancement ────────────────────────────────────
         enhanced_query = user_query
-        smart_info = None
+        agentic_info = None
 
         if enhance_query:
             t_enhance = time.perf_counter()
@@ -251,22 +150,38 @@ class RAGPipeline:
         # The retrieval query: use enhanced if available, else raw
         retrieval_query = enhanced_query
 
-        if enable_smart:
-            # SMART PATH: self-correcting retrieval loop
-            smart_result = self._smart_retrieve(
-                user_query, retrieval_query, pinecone_namespace, top_k_retrieve,
+        if enable_agentic:
+            # AGENTIC PATH: autonomous decision graph
+            state = self._run_agentic(
+                user_query, retrieval_query, pinecone_namespace,
+                top_k_retrieve, chat_history, session_id,
             )
-            documents = smart_result["documents"]
-            smart_info = smart_result["metrics"]
-            clarification = smart_result.get("clarification")
+            agentic_info = state.build_agentic_info()
 
-            # Fallback only when zero chunks across all attempts
-            if not documents:
-                # Use clarification message if available, else generic fallback
-                fallback = clarification or get_smart_fallback_message()
+            # Handle DIRECT intent (no documents needed)
+            if state.direct_response:
+                if session_id:
+                    self.memory.add_turn(session_id, user_query, state.direct_response)
+                _run_id = None
+                try:
+                    _rt = get_current_run_tree()
+                    if _rt:
+                        _run_id = str(_rt.id)
+                except Exception:
+                    pass
+                return {
+                    "answer": state.direct_response, "sources": [],
+                    "enhanced_query": enhanced_query,
+                    "namespace": namespace, "session_id": session_id,
+                    "agentic_info": agentic_info,
+                    "run_id": _run_id,
+                }
+
+            # Handle CLARIFY intent or zero-chunk fallback
+            if state.used_fallback or (state.clarification and not state.all_relevant):
+                fallback = state.clarification or NO_RESULTS_MESSAGE
                 if session_id:
                     self.memory.add_turn(session_id, user_query, fallback)
-                # Capture run_id even on fallback
                 _run_id = None
                 try:
                     _rt = get_current_run_tree()
@@ -278,9 +193,12 @@ class RAGPipeline:
                     "answer": fallback, "sources": [],
                     "enhanced_query": enhanced_query,
                     "namespace": namespace, "session_id": session_id,
-                    "smart_info": smart_info,
+                    "agentic_info": agentic_info,
                     "run_id": _run_id,
                 }
+
+            # Use the relevant documents from the agentic graph
+            documents = state.all_relevant
         else:
             # STANDARD PATH: single retrieval (ensemble: dense + BM25 via RRF)
             t_retrieve = time.perf_counter()
@@ -307,7 +225,7 @@ class RAGPipeline:
                 "answer": no_result, "sources": [],
                 "enhanced_query": enhanced_query,
                 "namespace": namespace, "session_id": session_id,
-                "smart_info": smart_info,
+                "agentic_info": agentic_info,
                 "run_id": _run_id,
             }
 
@@ -321,6 +239,13 @@ class RAGPipeline:
             chat_history=chat_history, session_id=session_id, enhanced_query=enhanced_query,
         )
         logger.info("⏱ generate: %.2fs", time.perf_counter() - t_generate)
+
+        # ── Post-generation hallucination check (agentic only) ───────
+        if enable_agentic and state is not None:
+            state.answer = answer
+            state = self.agentic_graph.post_generation_check(state)
+            answer = state.answer  # May include disclaimer
+            agentic_info = state.build_agentic_info()  # Refresh with hallucination data
 
         if session_id:
             self.memory.add_turn(session_id, user_query, answer)
@@ -343,7 +268,7 @@ class RAGPipeline:
             "answer": answer, "sources": sources,
             "enhanced_query": enhanced_query,
             "namespace": namespace, "session_id": session_id,
-            "smart_info": smart_info,
+            "agentic_info": agentic_info,
             "run_id": run_id,
         }
 
@@ -354,19 +279,25 @@ class RAGPipeline:
         self, user_query: str, namespace: str, enhance_query: bool = True,
         top_k_retrieve: int = DEFAULT_TOP_K_RETRIEVE,
         session_id: str = "",
-        enable_smart: bool = False,
+        enable_agentic: bool = False,
+        chat_history: List[Dict[str, str]] | None = None,
     ) -> Gen[Dict, None, None]:
         """Execute RAG pipeline with streaming token output."""
         t_start = time.perf_counter()
         pinecone_namespace = self._resolve_namespace(namespace)
 
-        chat_history = []
-        if session_id:
-            chat_history = self.memory.get_history(session_id)
+        if pinecone_namespace == "about-university":
+            top_k_retrieve = max(top_k_retrieve, 18)
+
+        if chat_history is None:
+            chat_history = []
+            if session_id:
+                chat_history = self.memory.get_history(session_id)
 
         # ── Query enhancement ────────────────────────────────────
         enhanced_query = user_query
-        smart_info = None
+        agentic_info = None
+        state = None
 
         if enhance_query:
             t_enhance = time.perf_counter()
@@ -376,18 +307,38 @@ class RAGPipeline:
         # The retrieval query: use enhanced if available, else raw
         retrieval_query = enhanced_query
 
-        if enable_smart:
-            # SMART PATH: self-correcting retrieval loop
-            smart_result = self._smart_retrieve(
-                user_query, retrieval_query, pinecone_namespace, top_k_retrieve,
+        if enable_agentic:
+            # AGENTIC PATH: autonomous decision graph
+            state = self._run_agentic(
+                user_query, retrieval_query, pinecone_namespace,
+                top_k_retrieve, chat_history, session_id,
             )
-            documents = smart_result["documents"]
-            smart_info = smart_result["metrics"]
-            clarification = smart_result.get("clarification")
+            agentic_info = state.build_agentic_info()
 
-            # Fallback only when zero chunks
-            if not documents:
-                fallback = clarification or get_smart_fallback_message()
+            # Handle DIRECT intent
+            if state.direct_response:
+                if session_id:
+                    self.memory.add_turn(session_id, user_query, state.direct_response)
+                _run_id = None
+                try:
+                    _rt = get_current_run_tree()
+                    if _rt:
+                        _run_id = str(_rt.id)
+                except Exception:
+                    pass
+                yield {
+                    "type": "metadata", "sources": [],
+                    "enhanced_query": enhanced_query,
+                    "namespace": namespace, "session_id": session_id,
+                    "agentic_info": agentic_info,
+                    "run_id": _run_id,
+                }
+                yield {"type": "token", "content": state.direct_response}
+                return
+
+            # Handle CLARIFY / fallback
+            if state.used_fallback or (state.clarification and not state.all_relevant):
+                fallback = state.clarification or NO_RESULTS_MESSAGE
                 if session_id:
                     self.memory.add_turn(session_id, user_query, fallback)
                 _run_id = None
@@ -401,11 +352,13 @@ class RAGPipeline:
                     "type": "metadata", "sources": [],
                     "enhanced_query": enhanced_query,
                     "namespace": namespace, "session_id": session_id,
-                    "smart_info": smart_info,
+                    "agentic_info": agentic_info,
                     "run_id": _run_id,
                 }
                 yield {"type": "token", "content": fallback}
                 return
+
+            documents = state.all_relevant
         else:
             # STANDARD PATH: single retrieval (ensemble: dense + BM25 via RRF)
             t_retrieve = time.perf_counter()
@@ -432,7 +385,7 @@ class RAGPipeline:
                 "type": "metadata", "sources": [],
                 "enhanced_query": enhanced_query,
                 "namespace": namespace, "session_id": session_id,
-                "smart_info": smart_info,
+                "agentic_info": agentic_info,
                 "run_id": _run_id,
             }
             yield {"type": "token", "content": no_result}
@@ -457,7 +410,7 @@ class RAGPipeline:
             "type": "metadata", "sources": sources,
             "enhanced_query": enhanced_query,
             "namespace": namespace, "session_id": session_id,
-            "smart_info": smart_info,
+            "agentic_info": agentic_info,
             "run_id": run_id,
         }
 
@@ -471,6 +424,26 @@ class RAGPipeline:
             yield {"type": "token", "content": token}
 
         full_answer = "".join(full_answer_parts)
+
+        # ── Post-generation hallucination check (agentic only) ───────
+        if enable_agentic and state is not None:
+            state.answer = full_answer
+            state = self.agentic_graph.post_generation_check(state)
+            agentic_info = state.build_agentic_info()
+
+            # If answer was modified (disclaimer added), emit the extra text
+            if state.answer != full_answer:
+                extra = state.answer[len(full_answer):]
+                if extra:
+                    yield {"type": "token", "content": extra}
+                full_answer = state.answer
+
+            # Emit updated agentic_info after hallucination check
+            yield {
+                "type": "agentic_update",
+                "agentic_info": agentic_info,
+            }
+
         if session_id:
             self.memory.add_turn(session_id, user_query, full_answer)
 

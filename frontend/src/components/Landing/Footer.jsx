@@ -81,7 +81,7 @@ function Footer() {
             <ul className="space-y-2.5">
               <li className="text-sm text-ash">University of Education</li>
               <li className="text-sm text-ash">Lahore, Pakistan</li>
-              <li className="text-sm text-ash">Smart RAG Pipeline</li>
+              <li className="text-sm text-ash">Agentic RAG Pipeline</li>
               <li className="text-sm text-ash">Self-Correcting Retrieval</li>
             </ul>
           </div>
@@ -93,7 +93,7 @@ function Footer() {
             © {new Date().getFullYear()} University of Education, Lahore — AI Assistant
           </p>
           <p className="text-2xs text-mist/40 tracking-wide">
-            Powered by RAG Pipeline · Smart Self-Correcting Retrieval
+            Powered by RAG Pipeline · Agentic RAG Pipeline
           </p>
         </div>
       </div>

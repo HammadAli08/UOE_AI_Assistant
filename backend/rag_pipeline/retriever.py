@@ -12,7 +12,8 @@ from threading import Lock
 from typing import Any, Dict, List, Optional, Tuple
 
 from openai import OpenAI
-from pinecone import Pinecone
+from pinecone import Pinecone, ServerlessSpec
+from pinecone.exceptions import NotFoundException
 
 from langsmith import traceable
 
@@ -21,6 +22,7 @@ from .config import (
     EMBEDDING_CACHE_TTL_SECONDS,
     PINECONE_API_KEY,
     PINECONE_INDEX_NAME,
+    OPENAI_EMBEDDING_DIMENSIONS,
     OPENAI_API_KEY,
     OPENAI_EMBEDDING_MODEL,
     OPENAI_EMBEDDING_DIMENSIONS,
@@ -46,7 +48,7 @@ class Retriever:
     def __init__(self):
         # Initialize Pinecone
         self.pc = Pinecone(api_key=PINECONE_API_KEY)
-        self.index = self.pc.Index(PINECONE_INDEX_NAME)
+        self.index = self._get_or_create_index(PINECONE_INDEX_NAME, OPENAI_EMBEDDING_DIMENSIONS)
 
         # Initialize OpenAI client once (keep-alive, pooled connections)
         self.openai_client = OpenAI(api_key=OPENAI_API_KEY)
@@ -59,6 +61,23 @@ class Retriever:
     @staticmethod
     def _normalize_query(query: str) -> str:
         return " ".join(query.strip().lower().split())
+
+    def _get_or_create_index(self, name: str, dimension: int):
+        """
+        Ensure the Pinecone index exists. If not found, create a serverless index
+        using the same dimension as the embeddings.
+        """
+        try:
+            return self.pc.Index(name)
+        except NotFoundException:
+            logger.warning("Pinecone index '%s' not found. Creating it (dim=%d)...", name, dimension)
+            self.pc.create_index(
+                name=name,
+                dimension=dimension,
+                metric="cosine",
+                spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+            )
+            return self.pc.Index(name)
 
     def _cache_get(self, cache: OrderedDict, key: Any, ttl_seconds: float):
         now = time.time()
@@ -143,10 +162,10 @@ class Retriever:
         for match in results.matches:
             metadata = match.metadata or {}
 
-            # Extract text content (try multiple fields)
-            text = metadata.get("text_preview", "")
+            # Extract text content - use full text field (text_preview is only 400 chars)
+            text = metadata.get("text", "")
             if not text:
-                text = metadata.get("page_content", "")
+                text = metadata.get("text_preview", "")
 
             doc = {
                 "id": match.id,
@@ -175,95 +194,8 @@ class Retriever:
         namespace: str,
         top_k: int = DEFAULT_TOP_K_RETRIEVE,
     ) -> List[Dict]:
-        """
-        Ensemble retriever: over-fetches from Pinecone (dense), applies a
-        local BM25 keyword score on the returned texts, and fuses both
-        ranked lists using Reciprocal Rank Fusion (RRF).
-
-        Falls back to dense-only if ensemble is disabled or BM25 fails.
-
-        Args:
-            query:     The search query
-            namespace: Pinecone namespace to search in
-            top_k:     Number of final results to return
-
-        Returns:
-            List of document dicts sorted by fused RRF score
-        """
-        if not ENSEMBLE_ENABLED:
-            return self.retrieve(query, namespace, top_k)
-
-        # 1. Over-fetch from Pinecone (dense retrieval)
-        overfetch_k = min(
-            top_k * ENSEMBLE_OVERFETCH_MULTIPLIER,
-            ENSEMBLE_MAX_CANDIDATES,
-        )
-        overfetch_k = max(overfetch_k, top_k)  # never less than top_k
-
-        candidates = self.retrieve(query, namespace, overfetch_k)
-        if not candidates:
-            return []
-
-        # 2. Build ephemeral BM25 index over candidate texts
-        try:
-            from rank_bm25 import BM25Okapi
-
-            texts = [doc.get("text", "") or "" for doc in candidates]
-            # Simple whitespace tokenisation (fast, language-agnostic)
-            tokenized_corpus = [t.lower().split() for t in texts]
-            tokenized_query = query.lower().split()
-
-            # Guard: if every document text is empty, skip BM25
-            if all(len(t) == 0 for t in tokenized_corpus):
-                logger.debug("Ensemble: all candidate texts empty, falling back to dense-only")
-                return candidates[:top_k]
-
-            bm25 = BM25Okapi(tokenized_corpus)
-            bm25_scores = bm25.get_scores(tokenized_query)  # numpy array, len == len(candidates)
-
-        except Exception as exc:
-            logger.warning("Ensemble BM25 scoring failed (%s), falling back to dense-only", exc)
-            return candidates[:top_k]
-
-        # 3. Build rank maps for both signals
-        #    Dense rank: candidates are already sorted by Pinecone score (desc)
-        dense_rank = {doc["id"]: rank for rank, doc in enumerate(candidates)}
-
-        #    BM25 rank: sort candidate indices by BM25 score (desc)
-        bm25_order = sorted(range(len(candidates)), key=lambda i: -bm25_scores[i])
-        bm25_rank = {candidates[idx]["id"]: rank for rank, idx in enumerate(bm25_order)}
-
-        # 4. Reciprocal Rank Fusion
-        k = RRF_K
-        wd = ENSEMBLE_DENSE_WEIGHT
-        ws = ENSEMBLE_SPARSE_WEIGHT
-
-        fused: List[Tuple[Dict, float]] = []
-        for doc in candidates:
-            doc_id = doc["id"]
-            rrf_score = (
-                wd * (1.0 / (k + dense_rank.get(doc_id, len(candidates))))
-                + ws * (1.0 / (k + bm25_rank.get(doc_id, len(candidates))))
-            )
-            fused.append((doc, rrf_score))
-
-        # Sort by fused score descending
-        fused.sort(key=lambda x: -x[1])
-
-        # Attach ensemble metadata and return top_k
-        results: List[Dict] = []
-        for doc, rrf_score in fused[:top_k]:
-            doc["ensemble_score"] = round(rrf_score, 6)
-            doc["dense_rank"] = dense_rank.get(doc["id"], -1)
-            doc["bm25_rank"] = bm25_rank.get(doc["id"], -1)
-            results.append(doc)
-
-        logger.info(
-            "Ensemble retrieve: %d candidates → top %d via RRF "
-            "(dense_w=%.2f, bm25_w=%.2f, rrf_k=%d, namespace=%s)",
-            len(candidates), len(results), wd, ws, k, namespace,
-        )
-        return results
+        """Dense-only ensemble stub: return top_k dense results (no RRF/BM25)."""
+        return self.retrieve(query, namespace, top_k)
 
 
 # Singleton instance

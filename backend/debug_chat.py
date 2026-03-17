@@ -25,7 +25,7 @@ try:
             enhance_query=True,
             top_k_retrieve=6,
             session_id="debug-session",
-            enable_smart=False
+            enable_agentic=False
         )
         print("4. Query SUCCESS!")
         print("   Answer:", result.get("answer")[:50], "...")
@@ -33,7 +33,7 @@ try:
         print("\n!!! QUERY FAILED !!!")
         traceback.print_exc()
 
-    print("5. Running query (enable_smart=True)...")
+    print("5. Running query (enable_agentic=True)...")
     try:
         result = pipeline.query(
             user_query="test query",
@@ -41,12 +41,12 @@ try:
             enhance_query=True,
             top_k_retrieve=6,
             session_id="debug-session",
-            enable_smart=True
+            enable_agentic=True
         )
-        print("6. Smart Query SUCCESS!")
+        print("6. Agentic Query SUCCESS!")
         print("   Answer:", result.get("answer")[:50], "...")
     except Exception as e:
-        print("\n!!! SMART QUERY FAILED !!!")
+        print("\n!!! AGENTIC QUERY FAILED !!!")
         traceback.print_exc()
 
 except ImportError as e:

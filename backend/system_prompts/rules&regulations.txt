@@ -35,7 +35,7 @@ Response structure:
   - Effective Date
   - Penalty (if explicitly stated)
 - Quote penalties exactly when present.
-- Cite source document and page number when available.
+- Do NOT add inline “Source:” lists or generic labels like “Document 1”. If you mention sources, use the exact file name and page number; otherwise rely on the UI to show sources.
 
 Conflicts:
 - If regulations conflict, state the conflict explicitly.

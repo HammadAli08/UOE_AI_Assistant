@@ -1,5 +1,5 @@
 """
-Smart Chunk Grader — Confidence-Based Relevance Grading (Batched)
+Chunk Grader — Confidence-Based Relevance Grading (Batched)
 
 Grades ALL retrieved chunks in a single LLM call using GPT-4o-mini with:
   - 5 evaluation signals (topic, program, specificity, department/year, completeness)
@@ -19,14 +19,14 @@ from openai import OpenAI
 from langsmith import traceable
 
 from ..config import OPENAI_API_KEY, SYSTEM_PROMPTS_DIR
-from .config import SMART_RAG_CONFIG
+from .config import AGENTIC_RAG_CONFIG
 
 logger = logging.getLogger(__name__)
 
-_GRADING_PROMPT_FILE = "smart_grading_prompt.txt"
+_GRADING_PROMPT_FILE = "grading_prompt.txt"
 
 
-class SmartChunkGrader:
+class ChunkGrader:
     """
     Grades retrieved chunks for relevance using confidence scoring.
 
@@ -36,8 +36,8 @@ class SmartChunkGrader:
 
     def __init__(self):
         self.client = OpenAI(api_key=OPENAI_API_KEY)
-        self.model = SMART_RAG_CONFIG["grading_model"]
-        self.confidence_threshold = SMART_RAG_CONFIG["confidence_threshold"]
+        self.model = AGENTIC_RAG_CONFIG["grading_model"]
+        self.confidence_threshold = AGENTIC_RAG_CONFIG["confidence_threshold"]
         self._prompt_template: Optional[str] = None
 
     @property
@@ -48,7 +48,6 @@ class SmartChunkGrader:
             if prompt_path.exists():
                 self._prompt_template = prompt_path.read_text().strip()
             else:
-                # Inline fallback — should not happen in production
                 self._prompt_template = (
                     "Question: {query}\n\n"
                     "{chunks_block}\n\n"
@@ -57,8 +56,6 @@ class SmartChunkGrader:
                     '"confidence": 0.0-1.0, "reason": "..."}}]'
                 )
         return self._prompt_template
-
-    # ── Build numbered chunks block ──────────────────────────────────────
 
     @staticmethod
     def _build_chunks_block(chunks: List[Dict]) -> str:
@@ -77,9 +74,7 @@ class SmartChunkGrader:
             )
         return "\n".join(lines)
 
-    # ── Main grading entry point ─────────────────────────────────────────
-
-    @traceable(name="smart_rag.grade_chunks", run_type="chain")
+    @traceable(name="agentic_rag.grade_chunks", run_type="chain")
     def grade_chunks(
         self,
         query: str,
@@ -106,7 +101,6 @@ class SmartChunkGrader:
                 chunks_block=chunks_block,
             )
 
-            # Scale max_tokens with chunk count (~50 tokens per verdict)
             max_tokens = max(200, 60 * len(chunks))
 
             resp = self.client.chat.completions.create(
@@ -120,15 +114,12 @@ class SmartChunkGrader:
             grades = self._parse_batch_grades(raw, len(chunks))
 
         except Exception as exc:
-            logger.warning("Smart batch grading error: %s — forcing retry", exc)
-            # On failure, mark all chunks as uncertain to force the retry loop
-            # instead of silently accepting everything (which kills iteration)
+            logger.warning("Batch grading error: %s — forcing retry", exc)
             for chunk in chunks:
                 chunk["grade_confidence"] = 0.0
                 chunk["grade_reason"] = f"Grading failed: {exc}"
             return [], list(chunks)
 
-        # ── Partition into relevant / irrelevant ─────────────────────────
         relevant: List[Dict] = []
         irrelevant: List[Dict] = []
 
@@ -146,22 +137,14 @@ class SmartChunkGrader:
                 irrelevant.append(chunk)
 
         logger.info(
-            "Smart grading: %d relevant, %d irrelevant out of %d chunks",
+            "Grading: %d relevant, %d irrelevant out of %d chunks",
             len(relevant), len(irrelevant), len(chunks),
         )
         return relevant, irrelevant
 
-    # ── Parsing helpers ──────────────────────────────────────────────────
-
     @staticmethod
     def _parse_batch_grades(raw: str, expected: int) -> List[Dict]:
-        """
-        Parse the LLM's JSON array response.
-
-        Falls back to individual JSON-object parsing if the array is
-        malformed, and ultimately to keyword heuristics.
-        """
-        # Strip markdown code fences if present
+        """Parse the LLM's JSON array response."""
         cleaned = raw.strip()
         if cleaned.startswith("```"):
             cleaned = cleaned.split("\n", 1)[-1]
@@ -179,7 +162,6 @@ class SmartChunkGrader:
                         "confidence": float(item.get("confidence", 0.0)),
                         "reason": str(item.get("reason", "")),
                     })
-                # Pad with safe defaults if LLM returned fewer items
                 while len(results) < expected:
                     results.append({
                         "relevant": True,
@@ -190,7 +172,6 @@ class SmartChunkGrader:
         except (json.JSONDecodeError, ValueError, KeyError):
             pass
 
-        # Final fallback: accept everything with neutral confidence
         logger.warning("Could not parse batch grades, accepting all chunks")
         return [
             {"relevant": True, "confidence": 0.5, "reason": "Parse failure fallback"}

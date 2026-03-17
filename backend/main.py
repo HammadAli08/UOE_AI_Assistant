@@ -13,7 +13,7 @@ import logging
 import subprocess
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List, Dict
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -100,11 +100,12 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=2000)
-    namespace: str = Field(default="bs-adp")
+    namespace: str = Field(default="about")
     enhance_query: bool = Field(default=True)
-    enable_smart: bool = Field(default=False, description="Enable Smart RAG with best-effort self-correcting retrieval (6 retries, answers with best available chunks)")
+    enable_agentic: bool = Field(default=False, description="Enable Agentic RAG with autonomous intent routing, query decomposition, and hallucination guard")
     top_k_retrieve: int = Field(default=DEFAULT_TOP_K_RETRIEVE, ge=1, le=20)
     session_id: Optional[str] = Field(default=None)
+    chat_history: Optional[List[Dict[str, str]]] = Field(default=None, description="Explicit chat history when resuming saved conversations")
 
 
 class ChatResponse(BaseModel):
@@ -114,7 +115,7 @@ class ChatResponse(BaseModel):
     namespace: str
     session_id: str
     run_id: Optional[str] = Field(default=None, description="LangSmith trace run ID for feedback linkage")
-    smart_info: Optional[dict] = Field(default=None, description="Smart RAG metrics: total_retrievals, query_rewrites, final_relevant_chunks, best_effort, etc.")
+    agentic_info: Optional[dict] = Field(default=None, description="Agentic RAG metrics: intent, steps, total_retrievals, query_rewrites, hallucination_score, etc.")
 
 
 class FeedbackRequest(BaseModel):
@@ -156,7 +157,8 @@ async def chat(request: ChatRequest):
             enhance_query=request.enhance_query,
             top_k_retrieve=request.top_k_retrieve,
             session_id=session_id,
-            enable_smart=request.enable_smart,
+            enable_agentic=request.enable_agentic,
+            chat_history=request.chat_history,
         )
 
         return ChatResponse(
@@ -166,7 +168,7 @@ async def chat(request: ChatRequest):
             namespace=result["namespace"],
             session_id=session_id,
             run_id=result.get("run_id"),
-            smart_info=result.get("smart_info"),
+            agentic_info=result.get("agentic_info"),
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -190,7 +192,8 @@ async def chat_stream(request: ChatRequest):
                     enhance_query=request.enhance_query,
                     top_k_retrieve=request.top_k_retrieve,
                     session_id=session_id,
-                    enable_smart=request.enable_smart,
+                    enable_agentic=request.enable_agentic,
+                    chat_history=request.chat_history,
                 ):
                     yield f"data: {json.dumps(chunk)}\n\n"
                 yield "data: [DONE]\n\n"
@@ -222,6 +225,7 @@ async def get_namespaces():
             {"id": "bs-adp", "name": "BS / ADP Programs", "description": "Bachelor's and Associate Degree Programs"},
             {"id": "ms-phd", "name": "MS / PhD Programs", "description": "Master's and Doctoral Programs"},
             {"id": "rules", "name": "Rules & Regulations", "description": "University policies and regulations"},
+            {"id": "about", "name": "About", "description": "General information about the university, fees, and contacts"},
         ]
     }
 

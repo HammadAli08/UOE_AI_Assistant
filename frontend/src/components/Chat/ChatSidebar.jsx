@@ -35,6 +35,7 @@ function ChatSidebar() {
   const sidebarMinimized = useChatStore((s) => s.sidebarMinimized);
   const closeSidebar = useChatStore((s) => s.closeSidebar);
   const toggleSidebarMinimized = useChatStore((s) => s.toggleSidebarMinimized);
+  const expandSidebar = useChatStore((s) => s.expandSidebar);
   const newChat = useChatStore((s) => s.newChat);
   const conversationId = useChatStore((s) => s.conversationId);
   const conversations = useChatStore((s) => s.conversations);
@@ -65,12 +66,25 @@ function ChatSidebar() {
         closeSidebar();
         return;
       }
+
+      // 1️⃣ Instant cache hit — zero network calls, feels native
+      const hitCache = useChatStore.getState().loadConversationFromCache(convo);
+      if (hitCache) {
+        closeSidebar();
+        return;
+      }
+
+      // 2️⃣ First-time load — show skeleton, fetch from Supabase
+      // ATOMIC: Sets namespace + conversationId + isLoadingConversation=true
+      // in ONE Zustand set() call to prevent Welcome Screen flash.
+      useChatStore.getState().prepareConversationLoad(convo);
+      closeSidebar();
+
       try {
         const messages = await fetchMessages(convo.id);
         loadConversation(convo, messages);
-        closeSidebar();
       } catch (err) {
-        console.warn('Failed to load conversation:', err);
+        useChatStore.getState().setLoadingConversation(false);
       }
     },
     [conversationId, loadConversation, closeSidebar],

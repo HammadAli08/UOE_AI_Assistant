@@ -11,7 +11,7 @@ const stats = [
   { metric: 50, suffix: '+', label: 'Academic Programs', desc: 'BS, ADP, MS & PhD' },
   { metric: 3, suffix: '', label: 'Knowledge Bases', desc: 'Curated Document Collections' },
   { metric: 0, prefix: 'AI', suffix: '', label: 'Powered Answers', desc: 'GPT-4o + RAG Pipeline', isText: true },
-  { metric: 6, suffix: '×', label: 'Self-Correcting', desc: 'Smart Retrieval Retries' },
+  { metric: 6, suffix: '×', label: 'Self-Correcting', desc: 'Agentic Retrieval Retries' },
 ];
 
 const prefersReducedMotion = () =>

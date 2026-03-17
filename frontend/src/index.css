@@ -96,6 +96,21 @@
     animation-delay: 0.3s;
   }
 
+  /* ── Simple processing dots ── */
+  .processing-dot {
+    @apply w-2 h-2 rounded-full;
+    background: #C8B94A;
+    animation: pulseDot 1.2s ease-in-out infinite;
+  }
+
+  .processing-dot--delay {
+    animation-delay: 0.15s;
+  }
+
+  .processing-dot--delay2 {
+    animation-delay: 0.3s;
+  }
+
   /* ── Streaming cursor — smooth breathing ── */
   .streaming-cursor::after {
     content: '▍';
@@ -289,6 +304,20 @@
 
   40% {
     transform: translateY(-6px) scale(1.15);
+    opacity: 1;
+  }
+}
+
+/* Pulse dot — smooth processing indicator */
+@keyframes pulseDot {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: scale(1.15);
     opacity: 1;
   }
 }
@@ -995,7 +1024,7 @@
   box-shadow: 0 0 6px currentColor;
 }
 
-/* ── Smart Mode Badge ── */
+/* ── Agentic Mode Badge ── */
 
 .thinking-mode-badge {
   position: absolute;

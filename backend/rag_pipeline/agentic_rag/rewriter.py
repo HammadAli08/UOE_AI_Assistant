@@ -1,8 +1,8 @@
 """
-Smart Query Rewriter — 3-Attempt Strategy Escalation
+Query Rewriter — Attempt-Aware Strategy Escalation
 
 Rewrites failed queries using context from irrelevant chunks (including reasons
-they were rejected), with progressive strategy escalation across 3 attempts:
+they were rejected), with progressive strategy escalation across attempts:
   - Attempt 1: Add specific keywords (course codes, full program names)
   - Attempt 2: Add metadata hints (batch year, semester, program type)
   - Attempt 3: Broaden / generalize the query as a last resort
@@ -17,24 +17,24 @@ from openai import OpenAI
 from langsmith import traceable
 
 from ..config import OPENAI_API_KEY, SYSTEM_PROMPTS_DIR
-from .config import SMART_RAG_CONFIG
+from .config import AGENTIC_RAG_CONFIG
 
 logger = logging.getLogger(__name__)
 
-_REWRITE_PROMPT_FILE = "smart_rewrite_prompt.txt"
+_REWRITE_PROMPT_FILE = "rewrite_prompt.txt"
 
 
-class SmartQueryRewriter:
+class QueryRewriter:
     """
     Rewrites queries that led to irrelevant retrievals.
 
-    Uses attempt-aware strategy escalation (3 levels) and includes
+    Uses attempt-aware strategy escalation and includes
     reasons why previous chunks were irrelevant to guide the rewrite.
     """
 
     def __init__(self):
         self.client = OpenAI(api_key=OPENAI_API_KEY)
-        self.model = SMART_RAG_CONFIG["rewriting_model"]
+        self.model = AGENTIC_RAG_CONFIG["rewriting_model"]
         self._prompt_template: Optional[str] = None
 
     @property
@@ -56,7 +56,7 @@ class SmartQueryRewriter:
                 )
         return self._prompt_template
 
-    @traceable(name="smart_rag.rewrite_query", run_type="chain")
+    @traceable(name="agentic_rag.rewrite_query", run_type="chain")
     def rewrite(
         self,
         original_query: str,
@@ -75,7 +75,6 @@ class SmartQueryRewriter:
             A rewritten query string
         """
         try:
-            # Build failed chunk summaries
             summaries = []
             reasons = []
             for chunk in failed_chunks[:5]:
@@ -107,10 +106,10 @@ class SmartQueryRewriter:
             rewritten = resp.choices[0].message.content.strip()
 
             logger.info(
-                "Smart rewrite (attempt %d): '%s' → '%s'",
+                "Query rewrite (attempt %d): '%s' → '%s'",
                 attempt, original_query, rewritten,
             )
             return rewritten
         except Exception as exc:
-            logger.warning("Smart query rewriting failed: %s — keeping original", exc)
+            logger.warning("Query rewriting failed: %s — keeping original", exc)
             return original_query

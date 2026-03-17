@@ -1,10 +1,11 @@
 // ──────────────────────────────────────────
 // useChat hook — orchestrates sending messages (streaming + fallback)
 // ──────────────────────────────────────────
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import useChatStore from '@/store/useChatStore';
 import useAuthStore from '@/store/useAuthStore';
 import { chatStreaming, chatNonStreaming } from '@/utils/api';
+import { MAX_TURNS } from '@/constants';
 import { createConversation, saveMessage, fetchConversations } from '@/lib/chatPersistence';
 
 export default function useChat() {
@@ -33,6 +34,9 @@ export default function useChat() {
     async (query) => {
       if (!query.trim() || isStreaming) return;
       if (isMaxTurns()) return;
+
+      // Capture existing messages (before appending the new user turn) to build chat history
+      const priorMessages = [...useChatStore.getState().messages];
 
       // Add user message
       addUserMessage(query.trim());
@@ -66,6 +70,11 @@ export default function useChat() {
         saveMessage(convId, { role: 'user', content: query.trim() }).catch(() => {});
       }
 
+      // Build chat history payload from prior turns (exclude the new user message to avoid duplication)
+      const chatHistory = priorMessages
+        .slice(-MAX_TURNS * 2) // last N turns (user+assistant pairs)
+        .map((m) => ({ role: m.role, content: m.content }));
+
       startStreaming();
 
       try {
@@ -74,6 +83,7 @@ export default function useChat() {
           namespace,
           sessionId,
           settings,
+          chatHistory,
           signal: abortRef.current.signal,
 
           onToken: (token) => {
@@ -82,7 +92,7 @@ export default function useChat() {
 
           onMetadata: (meta) => {
             if (meta.sources) metaRef.current.sources = meta.sources;
-            if (meta.smart_info) metaRef.current.smartInfo = meta.smart_info;
+            if (meta.agentic_info) metaRef.current.agenticInfo = meta.agentic_info;
             if (meta.enhanced_query) metaRef.current.enhancedQuery = meta.enhanced_query;
             if (meta.run_id) metaRef.current.runId = meta.run_id;
             if (meta.session_id) {
@@ -102,7 +112,7 @@ export default function useChat() {
                 role: 'assistant',
                 content: finalContent,
                 sources: metaRef.current.sources,
-                smartInfo: metaRef.current.smartInfo,
+                agenticInfo: metaRef.current.agenticInfo,
                 enhancedQuery: metaRef.current.enhancedQuery,
                 runId: metaRef.current.runId,
               }).catch(() => {});
@@ -116,17 +126,18 @@ export default function useChat() {
             try {
               const data = await chatNonStreaming({
                 query: query.trim(),
-                namespace,
-                sessionId,
-                settings,
-                signal: abortRef.current.signal,
-              });
+              namespace,
+              sessionId,
+              settings,
+              chatHistory,
+              signal: abortRef.current.signal,
+            });
 
               if (data.session_id) setSessionId(data.session_id);
 
               addAssistantMessage(data.answer, {
                 sources: data.sources || [],
-                smartInfo: data.smart_info || null,
+                agenticInfo: data.agentic_info || null,
                 enhancedQuery: data.enhanced_query || null,
                 runId: data.run_id || null,
               });
@@ -137,7 +148,7 @@ export default function useChat() {
                   role: 'assistant',
                   content: data.answer,
                   sources: data.sources,
-                  smartInfo: data.smart_info,
+                  agenticInfo: data.agentic_info,
                   enhancedQuery: data.enhanced_query,
                   runId: data.run_id,
                 }).catch(() => {});
@@ -184,6 +195,16 @@ export default function useChat() {
     abortRef.current?.abort();
     cancelStreaming();
   }, [cancelStreaming]);
+
+  // Cancel any ongoing streams if the user switches namespaces or conversations
+  // This prevents the response from the previous chat bleeding into the new one
+  useEffect(() => {
+    return () => {
+      if (isStreaming) {
+        stop();
+      }
+    };
+  }, [conversationId, namespace, isStreaming, stop]);
 
   return { send, stop, isStreaming };
 }

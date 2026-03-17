@@ -134,9 +134,9 @@ function Sidebar({ theme, cycleTheme }) {
             />
             <ToggleRow
               icon={Brain}
-              label="Smart RAG"
-              checked={settings.enableSmart}
-              onChange={(v) => updateSettings({ enableSmart: v })}
+              label="Agentic RAG"
+              checked={settings.enableAgentic}
+              onChange={(v) => updateSettings({ enableAgentic: v })}
             />
 
             {/* Top K slider */}

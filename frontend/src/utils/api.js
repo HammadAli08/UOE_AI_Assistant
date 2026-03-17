@@ -30,25 +30,27 @@ export async function fetchNamespaces() {
 /**
  * Build the request payload for chat endpoints.
  */
-function buildPayload({ query, namespace, sessionId, settings }) {
+function buildPayload({ query, namespace, sessionId, settings, chatHistory }) {
   return {
     query,
     namespace,
     session_id: sessionId || undefined,
     enhance_query: settings.enhanceQuery ?? true,
-    enable_smart: settings.enableSmart ?? false,
+    enable_agentic: settings.enableAgentic ?? false,
     top_k_retrieve: settings.topKRetrieve ?? 5,
+    // Optional explicit chat history (used when reopening saved conversations)
+    chat_history: chatHistory?.length ? chatHistory : undefined,
   };
 }
 
 /**
  * Non-streaming chat request (fallback).
  */
-export async function chatNonStreaming({ query, namespace, sessionId, settings, signal }) {
+export async function chatNonStreaming({ query, namespace, sessionId, settings, chatHistory, signal }) {
   const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildPayload({ query, namespace, sessionId, settings })),
+    body: JSON.stringify(buildPayload({ query, namespace, sessionId, settings, chatHistory })),
     signal,
   });
 
@@ -65,7 +67,7 @@ export async function chatNonStreaming({ query, namespace, sessionId, settings, 
  *
  * @param {Object} params
  * @param {Function} params.onToken      - Called with each text token
- * @param {Function} params.onMetadata   - Called with metadata object (sources, smart_info, etc.)
+ * @param {Function} params.onMetadata   - Called with metadata object (sources, agentic_info, etc.)
  * @param {Function} params.onDone       - Called when stream completes
  * @param {Function} params.onError      - Called on error
  * @param {AbortSignal} params.signal    - Abort signal
@@ -75,6 +77,7 @@ export async function chatStreaming({
   namespace,
   sessionId,
   settings,
+  chatHistory,
   onToken,
   onMetadata,
   onDone,
@@ -85,7 +88,7 @@ export async function chatStreaming({
     const res = await fetch(`${API_BASE}/chat/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildPayload({ query, namespace, sessionId, settings })),
+      body: JSON.stringify(buildPayload({ query, namespace, sessionId, settings, chatHistory })),
       signal,
     });
 
@@ -121,6 +124,9 @@ export async function chatStreaming({
           if (parsed.type === 'token' && parsed.content) {
             onToken(parsed.content);
           } else if (parsed.type === 'metadata') {
+            onMetadata(parsed);
+          } else if (parsed.type === 'agentic_update') {
+            // Post-generation hallucination check updates agentic_info
             onMetadata(parsed);
           } else if (parsed.type === 'error') {
             onError?.(new Error(parsed.message || parsed.content || 'Stream error'));

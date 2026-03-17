@@ -35,7 +35,10 @@ class Generator:
             return self._prompt_cache[namespace]
         prompt_file = SYSTEM_PROMPT_FILES.get(namespace)
         if not prompt_file:
-            default_prompt = "You are an academic assistant. Answer based on retrieved documents only."
+            default_prompt = (
+                "You are an academic assistant. Answer based on retrieved documents only. "
+                "Do NOT add inline source lists or generic labels like 'Document 1'; the UI shows sources."
+            )
             self._prompt_cache[namespace] = default_prompt
             return default_prompt
         prompt_path = SYSTEM_PROMPTS_DIR / prompt_file
@@ -43,7 +46,10 @@ class Generator:
             prompt = prompt_path.read_text().strip()
             self._prompt_cache[namespace] = prompt
             return prompt
-        default_prompt = "You are an academic assistant. Answer based on retrieved documents only."
+        default_prompt = (
+            "You are an academic assistant. Answer based on retrieved documents only. "
+            "Do NOT add inline source lists or generic labels like 'Document 1'; the UI shows sources."
+        )
         self._prompt_cache[namespace] = default_prompt
         return default_prompt
 
