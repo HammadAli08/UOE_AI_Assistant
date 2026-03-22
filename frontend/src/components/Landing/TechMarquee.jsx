@@ -10,7 +10,7 @@ const techBadges = [
   { name: 'Pinecone', desc: 'Vector Database' },
   { name: 'LangChain', desc: 'LLM Framework' },
   { name: 'Redis', desc: 'Memory Store' },
-  { name: 'HuggingFace', desc: 'Reranker Model' },
+  { name: 'LangSmith', desc: 'Tracing' },
   { name: 'FastAPI', desc: 'Backend API' },
   { name: 'React', desc: 'Frontend UI' },
   { name: 'Tailwind', desc: 'Styling' },

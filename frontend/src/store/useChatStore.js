@@ -120,7 +120,10 @@ const useChatStore = create((set, get) => ({
   setSessionId: (id) => set({ sessionId: id }),
 
   setConversationId: (id) => set({ conversationId: id }),
-  setConversations: (convos) => set({ conversations: convos }),
+  setConversations: (convos) =>
+    set((state) => ({
+      conversations: typeof convos === 'function' ? convos(state.conversations) : convos,
+    })),
 
   /** Save current messages to cache before switching away */
   _cacheCurrentMessages: () => {
@@ -244,9 +247,7 @@ const useChatStore = create((set, get) => ({
     set({
       namespace: convo.namespace,
       conversationId: convo.id,
-      messages: [],
       sessionId: null,
-      turnCount: 0,
       isStreaming: false,
       streamingContent: '',
       isLoadingConversation: true,   // ← keeps skeleton visible until loadConversation fires

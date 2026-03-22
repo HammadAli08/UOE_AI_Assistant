@@ -1,11 +1,11 @@
 """
 Filename: pinecone_ingestion_improved.py
 Description: IMPROVED Production-grade PDF ingestion with advanced chunking,
-             better metadata, and full reranker compatibility
+             better metadata, and retrieval-friendly chunking
              
 Key Improvements:
 1. Better semantic chunking with overlap optimization
-2. Enhanced metadata with text preview for reranker
+2. Enhanced metadata with text previews for retrieval quality
 3. Deduplication to avoid redundant vectors
 4. Resume capability (skip already processed files)
 5. Better error handling and logging
@@ -80,7 +80,7 @@ class ImprovedSemanticChunker:
     """
     IMPROVED semantic chunker with:
     1. Better boundary detection
-    2. Optimized overlap for reranker
+    2. Optimized overlap for retrieval quality
     3. Chunk quality validation
     """
     
@@ -90,7 +90,7 @@ class ImprovedSemanticChunker:
         # IMPROVED: More granular chunk sizes based on content type
         self.chunk_configs = {
             "bs-adp-schemes": {
-                "chunk_size": 1000,      # Reduced from 1200 for better reranker performance
+                "chunk_size": 1000,      # Reduced from 1200 for better retrieval precision
                 "chunk_overlap": 150,     # Reduced overlap (was 200)
                 "min_chunk_size": 100,    # NEW: Minimum viable chunk
                 "max_chunk_size": 1500,   # NEW: Hard limit
@@ -399,7 +399,7 @@ class EnhancedMetadataExtractor:
 # ==================== IMPROVED METADATA BUILDERS ====================
 
 class ImprovedBSADPMetadataBuilder:
-    """IMPROVED BS/ADP metadata with text preview for reranker"""
+    """IMPROVED BS/ADP metadata with text previews for retrieval quality"""
     
     @staticmethod
     def build(chunk_text: str, page_num: int, filename: str) -> Dict:
@@ -407,7 +407,7 @@ class ImprovedBSADPMetadataBuilder:
         prereqs = extractor.extract_prerequisites(chunk_text)
         course_code = extractor.extract_course_code(chunk_text)
         
-        # NEW: Text preview for reranker (first 500 chars)
+        # NEW: Text preview for retrieval-quality signals (first 500 chars)
         text_preview = chunk_text[:500].strip()
         
         metadata = {
@@ -447,7 +447,7 @@ class ImprovedBSADPMetadataBuilder:
             # Technical metadata
             "language": extractor.detect_language(chunk_text),
             "chunk_length": len(chunk_text),
-            "text_preview": text_preview,  # NEW: For reranker
+            "text_preview": text_preview,  # NEW: For retrieval quality
             "ingestion_timestamp": datetime.now().isoformat(),
             
             # NEW: Quality indicators
@@ -498,7 +498,7 @@ class ImprovedMSPHDMetadataBuilder:
             # Technical metadata
             "language": extractor.detect_language(chunk_text),
             "chunk_length": len(chunk_text),
-            "text_preview": text_preview,  # NEW: For reranker
+            "text_preview": text_preview,  # NEW: For retrieval quality
             "ingestion_timestamp": datetime.now().isoformat(),
             
             # Quality indicators
@@ -590,7 +590,7 @@ class ImprovedRulesMetadataBuilder:
             # Technical metadata
             "language": extractor.detect_language(chunk_text),
             "chunk_length": len(chunk_text),
-            "text_preview": text_preview,  # NEW: For reranker
+            "text_preview": text_preview,  # NEW: For retrieval quality
             "ingestion_timestamp": datetime.now().isoformat(),
             
             # Quality indicators

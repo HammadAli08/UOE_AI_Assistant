@@ -59,6 +59,7 @@ NAMESPACE_MAP = {
     "bs-adp": "bs-adp-schemes",
     "ms-phd": "ms-phd-schemes",
     "rules": "rules-regulations",
+    # General university info (fees, contacts, overview)
     "about": "about-university",
 }
 
@@ -78,16 +79,20 @@ SYSTEM_PROMPT_FILES = {
 }
 
 QUERY_ENHANCER_PROMPT_FILE = "query_enhancer_prompt.txt"
+SMART_GRADING_PROMPT_FILE = "smart_grading_prompt.txt"
+SMART_REWRITE_PROMPT_FILE = "smart_rewrite_prompt.txt"
 
 # =============================================================================
 # MODEL CONFIGURATION
 # =============================================================================
 
+# Pinecone index `uoeaiassistant` uses 3072-d vectors created with text-embedding-3-large.
+# Keep defaults aligned to avoid dimension mismatches at query time.
 OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
 OPENAI_EMBEDDING_DIMENSIONS = int(os.getenv("OPENAI_EMBEDDING_DIMENSIONS", "3072"))
 OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
 OPENAI_CHAT_TEMPERATURE = float(os.getenv("OPENAI_CHAT_TEMPERATURE", "0.1"))
-OPENAI_CHAT_MAX_TOKENS = int(os.getenv("OPENAI_CHAT_MAX_TOKENS", "8000"))
+OPENAI_CHAT_MAX_TOKENS = int(os.getenv("OPENAI_CHAT_MAX_TOKENS", "1500"))
 
 # =============================================================================
 # RETRIEVAL CONFIGURATION
@@ -115,7 +120,12 @@ RRF_K = int(os.getenv("RRF_K", "60"))
 
 QUERY_ENHANCER_TIMEOUT_SECONDS = float(os.getenv("QUERY_ENHANCER_TIMEOUT_SECONDS", "1.5"))
 
+# =============================================================================
+# SMART RAG CONFIGURATION
+# =============================================================================
 
+# Model used for chunk grading and query rewriting (cheap + fast)
+SMART_RAG_CLASSIFIER_MODEL = "gpt-4o-mini"
 
 # =============================================================================
 # FEEDBACK CONFIGURATION

@@ -67,7 +67,7 @@ We used Python 3.12 with FastAPI for the backend. The frontend runs React 18 wit
 
 For the AI components, we chose GPT-4o-mini because it's fast and cost-effective for the grading and rewriting tasks, while still accurate enough. The embedding model is text-embedding-3-large with 3072 dimensions—this gave us the best semantic understanding at the cost of slightly higher API usage.
 
-The vector database in Pinecone is organized into three namespaces with cosine similarity as the metric. We implemented semantic chunking that respects academic boundaries like course codes and article titles, keeping chunks between 700-1000 characters to fit within the reranker's context window.
+The vector database in Pinecone is organized into three namespaces with cosine similarity as the metric. We implemented semantic chunking that respects academic boundaries like course codes and article titles, keeping chunks between 700-1000 characters to improve retrieval precision and answer quality.
 
 For reliability, we added MD5 hash-based deduplication (skipping files that haven't changed), a resume capability that persists progress to JSON so interrupted runs can continue, optimized batching of 50 chunks per request to stay within rate limits, and full audit logging.
 

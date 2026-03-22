@@ -154,7 +154,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
           />
 
           {/* Bottom row inside panel: namespace · char count · Agentic RAG pill · Send */}
-          <div className="flex items-center justify-between px-3 pb-3">
+          <div className="agentic-parent relative flex items-center justify-between px-3 pb-3 overflow-visible">
             {/* Left: namespace selector + char counter */}
             <div className="flex items-center gap-2">
               {/* ── Namespace selector (inside panel) ── */}
@@ -240,7 +240,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
             <div className="flex items-center gap-2.5">
               {/* ── Agentic RAG pill toggle with enable animation ── */}
               <div
-                className="relative"
+                className="agentic-badge relative z-20"
                 onMouseEnter={() => setAgenticHovered(true)}
                 onMouseLeave={() => setAgenticHovered(false)}
               >
@@ -279,17 +279,18 @@ function ChatInput({ onSend, onStop, isStreaming }) {
 
                 {/* Tooltip */}
                 <AnimatePresence>
-                  {agenticHovered && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 5 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3
+                      {agenticHovered && (
+                        <motion.div
+                          className="autonomous-badge"
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 5 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3
                                  px-3.5 py-2 rounded-xl bg-navy-800/95 backdrop-blur-md
                                  border border-white/[0.08] shadow-elevated
                                  text-2xs text-ash whitespace-nowrap z-50"
-                    >
+                        >
                       <div className="flex items-center gap-2">
                         <Clock className="w-3 h-3 text-mustard-500 flex-shrink-0" />
                         <span>Autonomous retrieval · Classifies intent first</span>

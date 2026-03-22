@@ -13,7 +13,7 @@ const techLinks = [
   'OpenAI GPT-4o',
   'Pinecone',
   'Redis Cloud',
-  'HuggingFace',
+  'LangSmith',
   'FastAPI',
 ];
 

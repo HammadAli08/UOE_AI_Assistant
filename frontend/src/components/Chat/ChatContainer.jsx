@@ -1,8 +1,7 @@
 // ──────────────────────────────────────────
-// ChatContainer — scrollable message list
-// Pure top-to-bottom flow. Smart scroll only when content overflows.
+// ChatContainer — scrollable message list with AnimatePresence
 // ──────────────────────────────────────────
-import { useEffect, useRef, useCallback, memo } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import useChatStore from '@/store/useChatStore';
 import MessageBubble from './MessageBubble';
@@ -11,123 +10,149 @@ import ThinkingAnimation from './ThinkingAnimation';
 import WelcomeScreen from './WelcomeScreen';
 
 
-/* ── Skeleton loader — shown while fetching uncached conversations ── */
-function MessageSkeleton({ isUser = false }) {
-  return (
-    <div className={`flex gap-2 px-2 sm:px-6 py-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
-      {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/[0.06] animate-pulse" />
-      )}
-      <div className={`rounded-2xl px-4 py-3 space-y-2.5 ${
-        isUser
-          ? 'bg-mustard-500/[0.06] rounded-br-md max-w-[50%]'
-          : 'bg-white/[0.02] rounded-bl-md max-w-[65%]'
-      }`}>
-        <div className="h-3 rounded-full bg-white/[0.06] animate-pulse" style={{ width: isUser ? '120px' : '240px' }} />
-        {!isUser && (
-          <>
-            <div className="h-3 w-[200px] rounded-full bg-white/[0.05] animate-pulse" />
-            <div className="h-3 w-[160px] rounded-full bg-white/[0.04] animate-pulse" />
-          </>
-        )}
-      </div>
-      {isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/[0.06] animate-pulse" />
-      )}
-    </div>
-  );
-}
-
-function SkeletonLoader() {
-  return (
-    <div className="flex-1 min-h-0 flex flex-col justify-start relative">
-      <div className="flex-1 overflow-hidden px-2 sm:px-4 pt-4 space-y-3">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.15 }}
-            className="space-y-1"
-          >
-            <MessageSkeleton isUser />
-            <MessageSkeleton />
-            <MessageSkeleton isUser />
-            <MessageSkeleton />
-          </motion.div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
 function ChatContainer({ onSuggestionClick }) {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const streamingContent = useChatStore((s) => s.streamingContent);
-  const enableAgentic = useChatStore((s) => s.settings.enableAgentic);
+  const enableSmart = useChatStore((s) => s.settings.enableSmart);
   const isLoadingConversation = useChatStore((s) => s.isLoadingConversation);
   const conversationId = useChatStore((s) => s.conversationId);
-  const scrollRef = useRef(null);
+  const scrollCache = useChatStore((s) => s.scrollCache);
+  const cacheScrollPosition = useChatStore((s) => s.cacheScrollPosition);
+  const bottomRef = useRef(null);
+  const lastConversationIdRef = useRef(null);
+  const forceInstantScrollRef = useRef(false);
+  const scrollTopRef = useRef(0);
+  const isAtBottomRef = useRef(true);
+  const pendingRestoreRef = useRef(null);
+  const prevStreamingLengthRef = useRef(0);
+  const prevMessageCountRef = useRef(messages.length);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
-  // ── Single smart scroll effect ──
-  // Fires after every render caused by messages changing.
-  // Only scrolls to bottom IF content actually overflows the visible area.
-  // Short chats (1-2 messages) never overflow → never scroll → stay at top.
+  const BOTTOM_THRESHOLD = 48; // px buffer to treat near-bottom as bottom
+
+  const getContainer = () => document.getElementById('messages');
+
+  const scrollToBottom = (instant = false) => {
+    const container = getContainer();
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+    isAtBottomRef.current = true;
+    setShowJumpToLatest(false);
+    if (instant) forceInstantScrollRef.current = false;
+  };
+
+  // Attach scroll listener to track position and bottom state
   useEffect(() => {
-    const container = scrollRef.current;
+    const container = getContainer();
+    if (!container) return undefined;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      scrollTopRef.current = scrollTop;
+      const atBottom = scrollHeight - (scrollTop + clientHeight) <= BOTTOM_THRESHOLD;
+      isAtBottomRef.current = atBottom;
+      if (atBottom) setShowJumpToLatest(false);
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [conversationId]);
+
+  // Cache scroll position when leaving a conversation or unmounting
+  useEffect(() => {
+    const cacheCurrentScroll = (id) => {
+      if (!id) return;
+      const container = getContainer();
+      if (container) cacheScrollPosition(id, container.scrollTop);
+    };
+
+    // On conversation change, persist previous scroll
+    const prevId = lastConversationIdRef.current;
+    if (prevId && prevId !== conversationId) cacheCurrentScroll(prevId);
+    lastConversationIdRef.current = conversationId;
+
+    // On unmount, persist current conversation scroll
+    return () => cacheCurrentScroll(lastConversationIdRef.current);
+  }, [conversationId, cacheScrollPosition]);
+
+  // Prepare restoration target when a conversation is selected
+  useEffect(() => {
+    if (!conversationId) {
+      pendingRestoreRef.current = null;
+      return;
+    }
+    const cached = scrollCache[conversationId];
+    pendingRestoreRef.current = {
+      id: conversationId,
+      scrollTop: typeof cached === 'number' ? cached : null,
+    };
+    // If no cache, ensure first render goes to bottom instantly
+    if (cached == null) forceInstantScrollRef.current = true;
+  }, [conversationId, scrollCache]);
+
+  // Restore scroll position after messages load
+  useEffect(() => {
+    if (!pendingRestoreRef.current) return;
+    const { id, scrollTop } = pendingRestoreRef.current;
+    if (id !== conversationId) return;
+    const container = getContainer();
     if (!container) return;
 
-    const isOverflowing = container.scrollHeight > container.clientHeight;
-
-    if (isOverflowing) {
-      container.scrollTop = container.scrollHeight;
+    if (typeof scrollTop === 'number') {
+      container.scrollTop = scrollTop;
+    } else {
+      scrollToBottom(true);
     }
-  }, [messages, streamingContent]);
 
-  // ── Scroll position caching ──
-  const saveScrollPosition = useCallback(() => {
-    if (scrollRef.current && conversationId) {
-      useChatStore.getState().cacheScrollPosition(conversationId, scrollRef.current.scrollTop);
-    }
-  }, [conversationId]);
+    const { scrollHeight, clientHeight } = container;
+    isAtBottomRef.current = scrollHeight - (container.scrollTop + clientHeight) <= BOTTOM_THRESHOLD;
+    pendingRestoreRef.current = null;
+  }, [messages, streamingContent, isLoadingConversation, conversationId]);
 
-  // Restore scroll position when returning to a cached conversation
+  // Auto-scroll only when user is at/near bottom; otherwise show cue
   useEffect(() => {
-    if (!scrollRef.current || !conversationId) return;
-    const saved = useChatStore.getState().scrollCache[conversationId];
-    if (saved !== undefined) {
-      scrollRef.current.scrollTop = saved;
+    const container = getContainer();
+    if (!container) return;
+
+    const streamingLength = streamingContent ? streamingContent.length : 0;
+    const newMessage = messages.length > prevMessageCountRef.current;
+    const newStreamingToken = streamingLength > prevStreamingLengthRef.current;
+
+    prevMessageCountRef.current = messages.length;
+    prevStreamingLengthRef.current = streamingLength;
+
+    const hasNewContent = newMessage || (isStreaming && newStreamingToken);
+
+    if (forceInstantScrollRef.current) {
+      scrollToBottom(true);
+      return;
     }
-  }, [conversationId]);
 
-  useEffect(() => {
-    return () => saveScrollPosition();
-  }, [saveScrollPosition]);
+    if (hasNewContent) {
+      if (isAtBottomRef.current) {
+        scrollToBottom();
+      } else {
+        setShowJumpToLatest(true);
+      }
+    }
+  }, [messages, streamingContent, isStreaming]);
 
-  // Keyboard-aware scroll for mobile
+  // Keyboard-aware scroll for mobile: snap to bottom when keyboard opens/closes
   useEffect(() => {
     if (!window.visualViewport) return;
-    const handleResize = () => {
+    const scrollToBottom = () => {
       setTimeout(() => {
-        const container = scrollRef.current;
-        if (!container) return;
-        if (container.scrollHeight > container.clientHeight) {
-          container.scrollTop = container.scrollHeight;
-        }
+        const container = document.getElementById('messages');
+        if (container) container.scrollTop = container.scrollHeight;
       }, 150);
     };
-    window.visualViewport.addEventListener('resize', handleResize);
-    return () => window.visualViewport.removeEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('resize', scrollToBottom);
+    return () => window.visualViewport.removeEventListener('resize', scrollToBottom);
   }, []);
 
-  // ── Loading skeleton (first-time uncached loads) ──
-  if (isLoadingConversation) {
-    return <SkeletonLoader />;
-  }
-
-  // ── Welcome screen (no messages) ──
-  if (messages.length === 0 && !isStreaming) {
+  if (messages.length === 0 && !isStreaming && !isLoadingConversation) {
     return (
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y flex flex-col md:justify-center">
         <WelcomeScreen onSuggestionClick={onSuggestionClick} />
@@ -135,29 +160,30 @@ function ChatContainer({ onSuggestionClick }) {
     );
   }
 
-  // ── Chat messages ──
   return (
     <div className="flex-1 min-h-0 flex flex-col relative">
-      {/* 
-        Messages container:
-        - flex-direction: column + justify-content: flex-start
-        - Natural top-to-bottom HTML flow
-        - overflow-y: auto → scrollbar appears only when content overflows
-        - No column-reverse, no margin-top: auto, no flex-end
-      */}
-      <div
-        ref={scrollRef}
-        id="messages"
-        className="flex-1 overflow-y-auto overscroll-contain touch-pan-y px-2 sm:px-4 pb-36 md:pb-6 pt-4 overflow-anchor-none flex flex-col justify-start"
-      >
-        <div className="max-w-4xl mx-auto w-full space-y-3">
-          {messages.map((msg) => (
-            <div key={msg.id}>
-              <MessageBubble message={msg} />
-            </div>
-          ))}
+      {/* Scrollable message area */}
+      <div id="messages" className="flex-1 overflow-y-auto overscroll-contain touch-pan-y px-2 sm:px-4 pb-36 md:pb-6 pt-4 space-y-3 overflow-anchor-none">
+        <div className="max-w-4xl mx-auto">
+          <AnimatePresence mode="popLayout">
+            {messages.map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 80,
+                  damping: 18,
+                }}
+              >
+                <MessageBubble message={msg} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
-          {/* Streaming content */}
+          {/* Streaming content with fade-in + slide-up */}
           {isStreaming && streamingContent && (
             <motion.div
               initial={{ opacity: 0, y: 10, scale: 0.98 }}
@@ -169,16 +195,42 @@ function ChatContainer({ onSuggestionClick }) {
             </motion.div>
           )}
 
-          {/* Thinking animation */}
+          {/* Thinking animation — plays before streaming */}
           <AnimatePresence mode="wait">
             {isStreaming && !streamingContent && (
-              <ThinkingAnimation mode={enableAgentic ? 'agentic' : 'standard'} />
+              <ThinkingAnimation mode={enableSmart ? 'smart' : 'standard'} />
             )}
           </AnimatePresence>
+
+          <div ref={bottomRef} />
         </div>
       </div>
 
-      {/* Bottom gradient fade */}
+      {/* Jump to latest cue */}
+      {showJumpToLatest && (
+        <button
+          onClick={() => scrollToBottom(true)}
+          className="absolute right-4 sm:right-6 bottom-20 sm:bottom-16 px-3 py-2 rounded-full text-xs font-semibold
+                     bg-mustard-600 text-navy-950 shadow-lg shadow-mustard-900/40 hover:bg-mustard-500
+                     transition-colors duration-200"
+        >
+          Jump to latest
+        </button>
+      )}
+
+      {/* Loading overlay when switching conversations */}
+      {isLoadingConversation && (
+        <div className="absolute inset-0 z-20 bg-navy-950/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="flex items-center gap-2 text-mist text-sm">
+            <div className="processing-dot" />
+            <div className="processing-dot processing-dot--delay" />
+            <div className="processing-dot processing-dot--delay2" />
+            <span>Loading conversation…</span>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom gradient fade — overlay, doesn't affect layout */}
       <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-navy-950 to-transparent pointer-events-none z-10" />
     </div>
   );

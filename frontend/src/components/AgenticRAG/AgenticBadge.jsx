@@ -67,9 +67,6 @@ function formatStep(step) {
       return { label: `Intent → ${step.intent || '?'}`, time, icon: Sparkles };
     case 'retrieve':
       return { label: `Retrieve: ${step.docs_found ?? 0} docs`, time, icon: Brain };
-    case 'rerank':
-      if (step.skipped) return { label: 'Rerank skipped', time, icon: Info };
-      return { label: `Rerank: ${step.input_count} → ${step.output_count}`, time, icon: Shield };
     case 'grade':
       return { label: `Grade: ${step.relevant ?? 0}✓ ${step.irrelevant ?? 0}✗`, time, icon: CheckCircle };
     case 'quality_gate':
@@ -104,7 +101,16 @@ function AgenticBadge({ agenticInfo }) {
   const steps = agenticInfo?.steps || [];
 
   return (
-    <div className="inline-block">
+    <div className="relative inline-block overflow-visible z-10">
+      {/* ── Autonomous Retrieval badge (top overlay) ── */}
+      {agenticInfo?.autonomous && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <span className="px-2 py-0.5 rounded-full text-2xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            Autonomous retrieval · Classifies intent first
+          </span>
+        </div>
+      )}
+
       {/* ── Primary badge ─────────────────────────────────── */}
       <div className="flex items-center gap-1.5">
         <motion.button

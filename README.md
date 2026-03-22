@@ -31,8 +31,9 @@
 ## ✨ What Makes This Special?
 
 🎯 **Students ask questions in English or Roman Urdu** → Get accurate, cited answers from official university documents  
-🧠 **Self-Correcting Smart RAG** → Grades every chunk, rewrites queries, retries up to 6× until relevant  
-💬 **Conversational Memory** → Remembers 10 turns of context with Supabase persistence  
+🧠 **Agentic RAG Pipeline** → Intent classification, dynamic scaling of confidence thresholds, and query decomposition for multi-part questions  
+🛡️ **Three-State Hallucination Guard** → Evaluates answers as Grounded, Partial, or Ungrounded before showing the user  
+💬 **Conversational Memory** → Remembers 10 turns of context with Redis Cloud caching  
 ⚡ **Real-Time Streaming** → SSE streaming for instant response feedback  
 🎨 **Cinematic UI** → Dark glassmorphic design with smooth Framer Motion animations  
 
@@ -51,13 +52,14 @@ graph TB
     
     subgraph "Backend (FastAPI)"
         F[Query Enhancer<br/>GPT-4o-mini] --> G[Vector Retriever<br/>Pinecone 3072-dim]
-        G --> H[Smart RAG Engine]
+        G --> H[Agentic RAG Engine]
         H --> I[Generator<br/>GPT-4o-mini Streaming]
         
-        subgraph "Smart RAG"
-            J[Grader] --> K[Rewriter]
-            K --> L[Processor]
-            L --> M[6x Retry Logic]
+        subgraph "Agentic RAG"
+            J[Intent Classifier] --> K[Query Decomposer]
+            K --> L[Grader & Dynamic Thresholds]
+            L --> M[Rewriter & Retry Orchestrator]
+            M --> N[Three-State Hallucination Guard]
         end
     end
     
@@ -72,6 +74,7 @@ graph TB
     E -.->|HTTP/SSE| F
     I --> C
     H --> J
+    N -.-> I
     F -.-> R
     I -.-> R
     G -.-> O
@@ -90,40 +93,47 @@ graph TB
 User Question → Query Enhancement → Vector Retrieval (Top-5) → LLM Generation → Streamed Answer
 ```
 
-### Smart RAG Flow (Self-Correcting)
+### Agentic RAG Flow (Self-Correcting & Routing)
 
 ```
 User Question
     │
     ▼
-Query Enhancement (GPT-4o-mini rewrites for optimal retrieval)
+Intent Classification (DIRECT, RETRIEVE, DECOMPOSE)
     │
-    ▼
-Vector Retrieval (Pinecone, 5 docs, 3072-dim embeddings)
+    ├── DIRECT → Fast-path pre-defined responses or generic answers
     │
-    ▼
-Chunk Grading (GPT-4o-mini scores each chunk as relevant/irrelevant)
+    ├── DECOMPOSE → Split into sub-queries → Assign namespace router → Retrieve independently
     │
-    ├── ✅ ≥2 relevant chunks → Generate answer
-    │
-    └── ❌ <2 relevant → Rewrite query → Re-retrieve → Re-grade
-                              │
-                              └── Retry up to 6× with progressive strategy
-                                      │
-                                      ├── Found enough → Generate answer
-                                      ├── Some found → Best-effort answer
-                                      └── Zero found → Clarification / Fallback
+    └── RETRIEVE → Vector Retrieval (Pinecone, 3072-dim embeddings)
+          │
+          ▼
+Chunk Grading (Dynamic threshold: Factual 0.75, Procedural 0.70, Descriptive 0.55)
+          │
+          ├── ✅ Enough relevant chunks → Generate answer
+          │
+          └── ❌ Not enough → Rewrite query (progressive strategies) → Re-retrieve
+                                  │
+                                  ├── Retry up to 5×
+                                  │
+                                  ▼
+                          Generate Answer
+                                  │
+                                  ▼
+Three-State Hallucination Guard (Grounded, Partial, Ungrounded) → Final Streamed Response
 ```
 
 ### Pipeline Components
 
 | Component | Model / Service | Purpose |
 |-----------|----------------|---------|
-| **Query Enhancer** | GPT-4o-mini | Rewrites user queries for better retrieval (handles Roman Urdu) |
-| **Retriever** | Pinecone + text-embedding-3-large (3072d) | Semantic vector search across 3 namespaces |
-| **Smart Grader** | GPT-4o-mini | Binary relevance grading of each retrieved chunk |
-| **Smart Rewriter** | GPT-4o-mini | Progressive query rewriting when results are weak |
-| **Generator** | GPT-4o-mini | Synthesizes final answer from relevant chunks via streaming |
+| **Intent Classifier** | GPT-4o-mini | Routes queries to fast-paths, standard retrieval, or multi-question decomposition |
+| **Query Decomposer** | GPT-4o-mini | Splits compound questions and attaches targeted Pinecone namespaces |
+| **Retriever** | Pinecone + text-embedding-3-large | Semantic vector search across 3 domain-isolated namespaces |
+| **Smart Grader** | GPT-4o-mini | Binary relevance grading using dynamic query-type thresholds |
+| **Smart Rewriter** | GPT-4o-mini | Progressive query rewriting (keywords → metadata → generalization) |
+| **Hallucination Guard**| GPT-4o-mini | Validates LLM claims against sources before displaying to user (Grounded/Partial/Ungrounded) |
+| **Generator** | GPT-4o-mini | Synthesizes final answer from chunk provenance via streaming |
 | **Memory** | Redis Cloud | 10-turn conversational context with 30-min TTL |
 
 ---
@@ -192,10 +202,14 @@ Chunk Grading (GPT-4o-mini scores each chunk as relevant/irrelevant)
 │   │   ├── 💬 generator.py             # Streaming LLM responses
 │   │   ├── 🧠 memory.py                # Redis conversation memory
 │   │   │
-│   │   └── 🎯 smart_rag/               # Self-correcting retrieval
-│   │       ├── 📊 grader.py            # Chunk relevance scoring
+│   │   └── 🎯 agentic_rag/             # Autonomous retrieval pipeline
+│   │       ├── 📊 grader.py            # Chunk relevance scoring & dynamic thresholds
 │   │       ├── 🔄 rewriter.py          # Progressive query rewriting
-│   │       └── 🎮 processor.py         # Retry orchestration
+│   │       ├── 🧭 intent_classifier.py # DIRECT/RETRIEVE/DECOMPOSE routing logic
+│   │       ├── 🔀 query_decomposer.py  # Splits queries & attaches namespaces
+│   │       ├── 🛡️ hallucination_guard.py# Three-state grounding checks
+│   │       ├── 🌐 namespace_router.py  # Regex rules for DB constraints
+│   │       └── 🎮 graph.py             # LangGraph state orchestrator
 │   │
 │   ├── 📝 system_prompts/              # Namespace-specific prompts
 │   └── 📚 Data_Ingestion/              # PDF → Pinecone pipeline
@@ -412,7 +426,7 @@ npm run build
 
 ### 🔍 Metrics
 - **Response Time**: ~2-4 seconds (including retrieval + generation)
-- **Smart RAG Success Rate**: 94% (finds relevant chunks)
+- **Agentic Success Rate**: 94% (finds relevant chunks or gracefully degrades)
 - **Vector DB**: 28,800+ embeddings across 3 knowledge bases
 - **Memory**: 10-turn context with 30-minute TTL
 
@@ -429,22 +443,20 @@ npm run build
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `max_retries` | 6 | Maximum re-retrieval attempts |
+| `max_retries` | 5 | Maximum re-retrieval attempts in Agentic loop |
 | `min_relevant_chunks` | 2 | Minimum relevant chunks to proceed |
-| `confidence_threshold` | 0.6 | Minimum score for a chunk to be "relevant" |
-| `early_success_threshold` | 4 | Stop retrying if this many relevant chunks found |
-| `retry_top_k_boost` | 4 | Extra chunks retrieved per retry |
-| `grading_model` | gpt-4o-mini | Fast + cheap chunk grading |
-| `rewriting_model` | gpt-4o-mini | Progressive query rewriting |
+| `dynamic_thresholds` | 0.55 - 0.75 | Procedural, Descriptive, Factual specific thresholds |
+| `early_success_threshold` | 3 | Stop retrying if this many relevant chunks found |
+| `hallucination_states`| 3 | GROUNDED, PARTIAL, UNGROUNDED states |
 
-### Smart RAG States
+### Agentic RAG States
 
 | State | Meaning |
 |-------|---------|
-| ✅ **Pass** | All chunks relevant on first retrieval |
-| 🔄 **Retry** | Query was rewritten to find better results |
-| 🔵 **Best Effort** | Used best available chunks after retries |
-| 🔴 **Fallback** | No relevant chunks found, general knowledge used |
+| ✅ **Pass** | All chunks relevant and answer is Grounded |
+| 🔄 **Retry** | Query was rewritten with escalated strategy to find better results |
+| 🔵 **Partial** | Answer was partially grounded; user receives a mild warning |
+| 🔴 **Ungrounded** | Hallucination detected; response blocked and fallback served |
 
 ---
 
@@ -524,19 +536,7 @@ Developed as an academic project at the **University of Education, Lahore**. All
 [![Year](https://img.shields.io/badge/Academic_Year-2024--2025-green?style=flat&logo=calendar)](https://github.com/HammadAli08/UOE_AI_Assistant)
 
 </div>
-| `early_success_threshold` | 4 | Stop retrying if this many relevant chunks found |
-| `retry_top_k_boost` | 4 | Extra chunks retrieved per retry |
-| `grading_model` | gpt-4o-mini | Fast + cheap chunk grading |
-| `rewriting_model` | gpt-4o-mini | Progressive query rewriting |
 
-### Smart RAG States
-
-| State | Meaning |
-|-------|---------|
-| ✅ **Pass** | All chunks relevant on first retrieval |
-| 🔄 **Retry** | Query was rewritten to find better results |
-| 🔵 **Best Effort** | Used best available chunks after retries |
-| 🔴 **Fallback** | No relevant chunks found, general knowledge used |
 
 ---
 

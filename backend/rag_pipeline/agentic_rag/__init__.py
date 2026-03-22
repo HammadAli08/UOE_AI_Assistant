@@ -9,8 +9,8 @@ agentic system with:
   - HallucinationGuard:  Post-generation grounding verification
   - AgenticRAGGraph:     State-machine orchestrator driving all decisions
 
-Includes ChunkGrader, QueryRewriter, cross-encoder reranker,
-and wires in the previously-unconnected cross-encoder reranker.
+Includes ChunkGrader, QueryRewriter,
+and autonomous retrieval decisioning.
 """
 
 from .config import AGENTIC_RAG_CONFIG

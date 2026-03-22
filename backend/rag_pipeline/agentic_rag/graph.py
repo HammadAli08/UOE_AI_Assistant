@@ -16,9 +16,6 @@ autonomous decision graph:
     │  retrieve  decompose   │
     │    │       & merge     │
     │    ▼        │          │
-    │  rerank     ▼          │
-    │    │      rerank       │
-    │    ▼        │          │
     │  grade      ▼          │
     │    │      grade        │
     │    ├─ retry?           │
@@ -73,12 +70,11 @@ class AgenticRAGGraph:
     based on conditional branching.
     """
 
-    def __init__(self, retriever, generator, query_enhancer, reranker=None):
+    def __init__(self, retriever, generator, query_enhancer):
         # Injected pipeline components
         self.retriever = retriever
         self.generator = generator
         self.query_enhancer = query_enhancer
-        self.reranker = reranker
 
         # Agentic-specific components
         self.intent_classifier = IntentClassifier()
@@ -94,8 +90,6 @@ class AgenticRAGGraph:
         self.retry_boost = AGENTIC_RAG_CONFIG["retry_top_k_boost"]
         self.early_success = AGENTIC_RAG_CONFIG["early_success_threshold"]
         self.quality_threshold = AGENTIC_RAG_CONFIG["avg_confidence_threshold"]
-        self.rerank_enabled = AGENTIC_RAG_CONFIG["rerank_enabled"]
-        self.reranker_top_k = AGENTIC_RAG_CONFIG["reranker_top_k"]
         self.max_hallucination_retries = AGENTIC_RAG_CONFIG["max_hallucination_retries"]
 
     # ═══════════════════════════════════════════════════════════════════
@@ -210,29 +204,6 @@ class AgenticRAGGraph:
         )
         return documents
 
-    def _node_rerank(self, state: AgentState, documents: List[Dict], query: str) -> List[Dict]:
-        """Node: Rerank documents using cross-encoder (if available)."""
-        if not self.rerank_enabled or self.reranker is None:
-            state.log_step("rerank", skipped=True, reason="reranker not available")
-            return documents
-
-        try:
-            reranked = self.reranker.rerank(
-                query=query,
-                documents=documents,
-                top_k=self.reranker_top_k,
-            )
-            state.log_step(
-                "rerank",
-                input_count=len(documents),
-                output_count=len(reranked),
-            )
-            return reranked
-        except Exception as exc:
-            logger.warning("Reranking failed: %s — using original order", exc)
-            state.log_step("rerank", skipped=True, reason=str(exc))
-            return documents
-
     def _node_grade(
         self, state: AgentState, documents: List[Dict],
     ) -> tuple:
@@ -300,9 +271,6 @@ class AgenticRAGGraph:
                     current_query = self._node_rewrite(state)
                     continue
                 break
-
-            # Rerank (new! wires the previously-dead reranker)
-            documents = self._node_rerank(state, documents, current_query)
 
             # Grade against original user query (not rewritten)
             relevant, irrelevant = self._node_grade(state, documents)
@@ -526,9 +494,9 @@ class AgenticRAGGraph:
 _graph: Optional[AgenticRAGGraph] = None
 
 
-def get_agentic_graph(retriever, generator, query_enhancer, reranker=None) -> AgenticRAGGraph:
+def get_agentic_graph(retriever, generator, query_enhancer) -> AgenticRAGGraph:
     """Get or create AgenticRAGGraph singleton."""
     global _graph
     if _graph is None:
-        _graph = AgenticRAGGraph(retriever, generator, query_enhancer, reranker)
+        _graph = AgenticRAGGraph(retriever, generator, query_enhancer)
     return _graph

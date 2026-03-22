@@ -111,6 +111,25 @@
     animation-delay: 0.3s;
   }
 
+  /* ── Agentic toggle stacking fix ── */
+  .agentic-parent {
+    position: relative;
+    overflow: visible;
+  }
+
+  .agentic-badge {
+    position: relative;
+    z-index: 1;
+  }
+
+  .autonomous-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+  }
+
   /* ── Streaming cursor — smooth breathing ── */
   .streaming-cursor::after {
     content: '▍';

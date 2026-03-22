@@ -45,12 +45,12 @@ const features = [
     icon: RefreshCw,
     num: '04',
     title: 'Accurate Answers',
-    desc: 'Every retrieved chunk is graded for relevance and reranked for precision — only the best information reaches you.',
+    desc: 'Every retrieved chunk is graded for relevance so only grounded and useful information reaches you.',
     gradient: 'from-violet-400 via-purple-500 to-fuchsia-500',
     iconBg: 'bg-violet-500/10',
     iconColor: 'text-violet-400',
     glowColor: 'rgba(167,139,250,0.15)',
-    checklist: ['Relevance grading', 'Cross-encoder reranking', 'Precision focused'],
+    checklist: ['Relevance grading', 'Grounded responses', 'Precision focused'],
   },
 ];
 

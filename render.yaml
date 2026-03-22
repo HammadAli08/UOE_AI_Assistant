@@ -41,9 +41,6 @@ services:
         value: default
       - key: REDIS_PASSWORD
         sync: false
-      # ── HuggingFace ──
-      - key: HF_API_KEY
-        sync: false
       # ── App ──
       - key: APP_ENV
         value: production

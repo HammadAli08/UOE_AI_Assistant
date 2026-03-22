@@ -11,6 +11,10 @@ import { createConversation, saveMessage, fetchConversations } from '@/lib/chatP
 export default function useChat() {
   const abortRef = useRef(null);
   const metaRef = useRef({});
+  const queueRef = useRef('');        // incoming token buffer
+  const pumpRef = useRef(null);       // interval id for smooth typing
+  const streamEndedRef = useRef(false);
+  const finalizedRef = useRef(false);
 
   const {
     namespace,
@@ -29,6 +33,19 @@ export default function useChat() {
     setConversations,
     isMaxTurns,
   } = useChatStore();
+
+  const stopPump = useCallback(() => {
+    if (pumpRef.current) {
+      clearInterval(pumpRef.current);
+      pumpRef.current = null;
+    }
+  }, []);
+
+  const resetQueue = useCallback(() => {
+    queueRef.current = '';
+    streamEndedRef.current = false;
+    finalizedRef.current = false;
+  }, []);
 
   const send = useCallback(
     async (query) => {
@@ -76,6 +93,51 @@ export default function useChat() {
         .map((m) => ({ role: m.role, content: m.content }));
 
       startStreaming();
+      resetQueue();
+
+      const flushAndFinish = () => {
+        if (finalizedRef.current) return;
+        finalizedRef.current = true;
+
+        if (queueRef.current.length > 0) {
+          appendStreamToken(queueRef.current);
+          queueRef.current = '';
+        }
+
+        stopPump();
+
+        const finalContent = useChatStore.getState().streamingContent;
+        finishStreaming(metaRef.current);
+
+        // ═══ Persist assistant message ═══
+        if (user && convId) {
+          saveMessage(convId, {
+            role: 'assistant',
+            content: finalContent,
+            sources: metaRef.current.sources,
+            agenticInfo: metaRef.current.agenticInfo,
+            enhancedQuery: metaRef.current.enhancedQuery,
+            runId: metaRef.current.runId,
+          }).catch(() => {});
+        }
+      };
+
+      const ensurePump = () => {
+        if (pumpRef.current) return;
+        pumpRef.current = window.setInterval(() => {
+          if (queueRef.current.length > 0) {
+            const chunkSize = queueRef.current.length > 20 ? 4 : 2;
+            const chunk = queueRef.current.slice(0, chunkSize);
+            queueRef.current = queueRef.current.slice(chunkSize);
+            appendStreamToken(chunk);
+            return;
+          }
+
+          if (streamEndedRef.current) {
+            flushAndFinish();
+          }
+        }, 18);
+      };
 
       try {
         await chatStreaming({
@@ -87,7 +149,8 @@ export default function useChat() {
           signal: abortRef.current.signal,
 
           onToken: (token) => {
-            appendStreamToken(token);
+            queueRef.current += token;
+            ensurePump();
           },
 
           onMetadata: (meta) => {
@@ -102,36 +165,25 @@ export default function useChat() {
           },
 
           onDone: () => {
-            // Capture content before finishStreaming clears it
-            const finalContent = useChatStore.getState().streamingContent;
-            finishStreaming(metaRef.current);
-
-            // ═══ Persist assistant message ═══
-            if (user && convId) {
-              saveMessage(convId, {
-                role: 'assistant',
-                content: finalContent,
-                sources: metaRef.current.sources,
-                agenticInfo: metaRef.current.agenticInfo,
-                enhancedQuery: metaRef.current.enhancedQuery,
-                runId: metaRef.current.runId,
-              }).catch(() => {});
-            }
+            streamEndedRef.current = true;
+            ensurePump();
           },
 
           onError: async (err) => {
             console.warn('Stream failed, falling back to non-streaming:', err.message);
+            stopPump();
+            resetQueue();
             cancelStreaming();
 
             try {
               const data = await chatNonStreaming({
                 query: query.trim(),
-              namespace,
-              sessionId,
-              settings,
-              chatHistory,
-              signal: abortRef.current.signal,
-            });
+                namespace,
+                sessionId,
+                settings,
+                chatHistory,
+                signal: abortRef.current.signal,
+              });
 
               if (data.session_id) setSessionId(data.session_id);
 
@@ -165,6 +217,8 @@ export default function useChat() {
       } catch (err) {
         if (err.name !== 'AbortError') {
           cancelStreaming();
+          stopPump();
+          resetQueue();
           addAssistantMessage(
             'Sorry, I encountered an error processing your request. Please try again.',
             {}
@@ -188,13 +242,17 @@ export default function useChat() {
       setConversationId,
       setConversations,
       isMaxTurns,
+      stopPump,
+      resetQueue,
     ]
   );
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
+    stopPump();
+    resetQueue();
     cancelStreaming();
-  }, [cancelStreaming]);
+  }, [cancelStreaming, resetQueue, stopPump]);
 
   // Cancel any ongoing streams if the user switches namespaces or conversations
   // This prevents the response from the previous chat bleeding into the new one

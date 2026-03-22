@@ -6,12 +6,16 @@ import {
   Plus,
   MessageSquare,
   Trash2,
+  Edit3,
+  Check,
+  X,
   LogIn,
   LogOut,
   User,
   GraduationCap,
   FlaskConical,
-  Scale,
+  ScrollText,
+  Building2,
   ChevronRight,
   Menu,
 } from 'lucide-react';
@@ -22,9 +26,15 @@ import {
   fetchConversations,
   fetchMessages,
   deleteConversation,
+  updateConversationTitle,
 } from '@/lib/chatPersistence';
 
-const NS_ICONS = { 'bs-adp': GraduationCap, 'ms-phd': FlaskConical, rules: Scale };
+const NS_ICONS = {
+  'bs-adp': GraduationCap,
+  'ms-phd': FlaskConical,
+  rules: ScrollText,
+  about: Building2,
+};
 
 function ChatSidebar() {
   const user = useAuthStore((s) => s.user);
@@ -43,6 +53,8 @@ function ChatSidebar() {
   const loadConversation = useChatStore((s) => s.loadConversation);
 
   const [deleting, setDeleting] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState('');
 
   // Refresh conversations when user changes
   useEffect(() => {
@@ -62,6 +74,8 @@ function ChatSidebar() {
 
   const handleLoadConversation = useCallback(
     async (convo) => {
+      setEditingId(null);
+      setEditValue('');
       if (convo.id === conversationId) {
         closeSidebar();
         return;
@@ -105,6 +119,48 @@ function ChatSidebar() {
       }
     },
     [conversations, conversationId, newChat, setConversations],
+  );
+
+  const handleStartRename = useCallback((e, convo) => {
+    e.stopPropagation();
+    setEditingId(convo.id);
+    setEditValue(convo.title);
+  }, []);
+
+  const handleRenameSubmit = useCallback(
+    async (e, convoId) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const nextTitle = editValue.trim();
+      if (!nextTitle) {
+        setEditingId(null);
+        return;
+      }
+      try {
+        await updateConversationTitle(convoId, nextTitle);
+        setConversations(
+          conversations.map((c) =>
+            c.id === convoId ? { ...c, title: nextTitle, updated_at: new Date().toISOString() } : c
+          )
+        );
+        setEditingId(null);
+      } catch (err) {
+        console.warn('Failed to rename conversation:', err);
+      }
+    },
+    [editValue, setConversations, conversations],
+  );
+
+  const handleRenameKeyDown = useCallback(
+    (e, convoId) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setEditingId(null);
+      } else if (e.key === 'Enter') {
+        handleRenameSubmit(e, convoId);
+      }
+    },
+    [handleRenameSubmit],
   );
 
   const handleSignOut = useCallback(async () => {
@@ -309,30 +365,79 @@ function ChatSidebar() {
                   {label}
                 </p>
                 {convos.map((convo) => (
-                  <button
-                    key={convo.id}
-                    onClick={() => handleLoadConversation(convo)}
-                    className={clsx(
-                      'w-full group flex items-center gap-2 px-3 py-2.5 rounded-lg text-left',
-                      'transition-all duration-200',
-                      convo.id === conversationId
-                        ? 'bg-white/[0.08] text-cream border border-mustard-500/20'
-                        : 'text-ash hover:text-cream hover:bg-white/[0.04] border border-transparent',
-                    )}
-                  >
-                    <span className="flex-shrink-0 text-mist">
-                      {(() => { const Icon = NS_ICONS[convo.namespace] || MessageSquare; return <Icon className="w-3.5 h-3.5" />; })()}
-                    </span>
-                    <span className="flex-1 truncate text-sm">{convo.title}</span>
-                    <button
-                      onClick={(e) => handleDelete(e, convo.id)}
-                      disabled={deleting === convo.id}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded text-mist/60
-                                 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </button>
+                  (() => {
+                    const Icon = NS_ICONS[convo.namespace] || MessageSquare;
+                    const isEditing = editingId === convo.id;
+                    return (
+                      <div
+                        key={convo.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleLoadConversation(convo)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleLoadConversation(convo); }}
+                        className={clsx(
+                          'w-full group flex items-center gap-2 px-3 py-2.5 rounded-lg text-left',
+                          'transition-all duration-200',
+                          convo.id === conversationId
+                            ? 'bg-white/[0.08] text-cream border border-mustard-500/20'
+                            : 'text-ash hover:text-cream hover:bg-white/[0.04] border border-transparent',
+                        )}
+                      >
+                        <span className="flex-shrink-0 text-mist">
+                          <Icon className="w-3.5 h-3.5" />
+                        </span>
+
+                        {isEditing ? (
+                          <form
+                            onSubmit={(e) => handleRenameSubmit(e, convo.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1 flex-1"
+                          >
+                            <input
+                              autoFocus
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => handleRenameKeyDown(e, convo.id)}
+                              className="flex-1 text-sm bg-white/[0.05] border border-white/[0.12] rounded px-2 py-1 text-cream focus:outline-none focus:ring-1 focus:ring-mustard-500"
+                              placeholder="Rename chat"
+                            />
+                            <button
+                              type="submit"
+                              className="p-1 rounded text-green-400 hover:bg-green-500/10 transition-all duration-150"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setEditingId(null); }}
+                              className="p-1 rounded text-mist/60 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </form>
+                        ) : (
+                          <>
+                            <span className="flex-1 truncate text-sm">{convo.title}</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => handleStartRename(e, convo)}
+                                className="opacity-0 group-hover:opacity-100 p-1 rounded text-mist/60 hover:text-cream hover:bg-white/[0.08] transition-all duration-200"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDelete(e, convo.id)}
+                                disabled={deleting === convo.id}
+                                className="opacity-0 group-hover:opacity-100 p-1 rounded text-mist/60 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()
                 ))}
               </div>
             ))

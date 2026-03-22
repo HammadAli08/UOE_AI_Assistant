@@ -59,7 +59,7 @@ load_dotenv()
 # ─────────────────────────────────────────────────────────────────────────────
 
 PINECONE_INDEX   = "uoeaiassistant"
-PINECONE_NS      = "faculty"
+PINECONE_NS      = "about-university"
 PINECONE_DIM     = 3072
 PINECONE_METRIC  = "cosine"
 PINECONE_CLOUD   = "aws"

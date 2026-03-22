@@ -24,6 +24,7 @@ httpx[http2]>=0.27.0
 
 # OpenAI SDK (for GPT-4o)
 openai>=1.0.0
+python-dotenv==1.0.1
 
 # BM25 sparse retrieval (ensemble retriever)
 rank-bm25>=0.2.2

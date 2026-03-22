@@ -7,7 +7,6 @@ Extends the self-correcting retrieval loop and adds:
   - Intent classification (DIRECT / RETRIEVE / DECOMPOSE / CLARIFY)
   - Query decomposition for multi-part questions
   - Post-generation hallucination guard
-  - Integrated cross-encoder reranking
 """
 
 AGENTIC_RAG_CONFIG = {
@@ -43,9 +42,6 @@ AGENTIC_RAG_CONFIG = {
     "hallucination_max_tokens": 200,
     "max_hallucination_retries": 1,     # regenerate once if ungrounded
 
-    # ── Reranker ─────────────────────────────────────────────────────
-    "rerank_enabled": False,              # reranking disabled
-    "reranker_top_k": 5,                  # (unused when disabled)
 }
 
 # ── Intent enum values ───────────────────────────────────────────────

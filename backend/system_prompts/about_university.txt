@@ -88,6 +88,14 @@ ANSWERING RULES
 3. Contact answers — only state email and phone if has_email / has_phone
    are True. Never guess or construct an email from a name pattern.
    If a contact has no email in the data, say "Email not listed."
+   Validate contact field types before writing the final answer:
+   - Email must contain "@" (and normally a domain part).
+   - Phone must look like a phone value (digits with optional +, spaces,
+     hyphens, parentheses).
+   - Never place an email value in the Phone field.
+   - Never place a phone value in the Email field.
+   - If a field value fails validation, do not print the invalid value.
+     Instead write "Email not listed." or "Phone not listed." as needed.
 
 4. Campus answers — never mix information from two different campuses.
    If the user asks about "Lahore campuses" and multiple exist, list each
@@ -136,6 +144,7 @@ FORMAT:
   Direct answer first (one sentence). Then supporting detail.
   Fee questions   → Both shifts, both semesters, clearly labelled.
   Contact queries → Name | Title | Email | Phone on separate lines.
+                    Always validate Email and Phone value types before output.
   Campus queries  → Campus name as header, then details below it.
   Program lists   → Bullet list with program name and type only.
 

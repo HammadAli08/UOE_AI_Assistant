@@ -38,7 +38,7 @@ The system implements strict **Domain Isolation** across three namespaces to pre
 ### A. Improved Semantic Chunking
 Instead of naive character splitting, we implemented an `ImprovedSemanticChunker` that:
 - Detects academic boundaries like `Course Code:`, `Article`, `Rule`, and `Semester`.
-- Uses optimized sizes (700-1000 characters) to fit within Reranker context windows.
+- Uses optimized sizes (700-1000 characters) to improve retrieval precision and chunk quality.
 - Filters out "junk" chunks (under 80-100 characters) to maintain high vector density.
 
 ### B. Rich Metadata Extraction
@@ -46,7 +46,7 @@ The pipeline automatically extracts 20-25 fields per chunk, including:
 - **Course Metadata**: Code, Title, Credit Hours, Semesters, Prerequisites.
 - **Rule Categorization**: Admission, Fee, Grading, Probation, Discipline.
 - **Technical Flags**: Language detection (English/Urdu), Page numbers, File hashes.
-- **Reranker Optimization**: Text previews stored in metadata for faster top-k reranking.
+- **Retrieval Optimization**: Text previews stored in metadata for faster relevance filtering.
 
 ### C. Reliability & Performance
 - **Deduplication**: Uses MD5 file hashes to skip unchanged documents.
