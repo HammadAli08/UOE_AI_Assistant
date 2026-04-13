@@ -99,14 +99,27 @@ class QueryDecomposer:
         try:
             result = json.loads(cleaned)
             if isinstance(result, list):
-                return [str(q).strip() for q in result if str(q).strip()]
+                queries: List[str] = []
+                for item in result:
+                    if isinstance(item, dict):
+                        # Extract 'query' key as per prompt instructions
+                        q = item.get("query", "")
+                    else:
+                        q = str(item)
+                    
+                    if q.strip():
+                        queries.append(q.strip())
+                return queries
         except (json.JSONDecodeError, ValueError):
             pass
 
-        # Fallback: try splitting by newlines
-        lines = [l.strip().lstrip("- •0123456789.").strip()
-                 for l in raw.split("\n") if l.strip()]
-        return [l for l in lines if len(l) > 5]
+        # Fallback: try splitting by newlines and stripping common bullet points
+        lines = []
+        for l in raw.split("\n"):
+            line = l.strip().lstrip("- •0123456789.")
+            if line.strip() and len(line.strip()) > 5:
+                lines.append(line.strip())
+        return lines
 
 
 # ── Singleton ────────────────────────────────────────────────────────

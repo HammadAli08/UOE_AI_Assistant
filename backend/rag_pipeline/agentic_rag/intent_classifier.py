@@ -11,6 +11,7 @@ Uses a fast-path heuristic for common greetings to avoid LLM latency,
 then falls back to GPT-4o-mini for complex queries.
 """
 
+import json
 import re
 import logging
 from typing import Dict, List, Optional
@@ -169,7 +170,7 @@ class IntentClassifier:
             self._fast_response = fast_response
             return INTENT_DIRECT
 
-        # ── Slow-path: Use LLM for non-obvious queries ───────────────────────
+        # ── Slow-path: Use LLM for non-obvious queries ───────────────────
         try:
             chat_context = self._build_chat_context(chat_history or [])
             prompt = self.prompt_template.format(
@@ -183,23 +184,61 @@ class IntentClassifier:
                 temperature=AGENTIC_RAG_CONFIG["intent_temperature"],
                 max_tokens=AGENTIC_RAG_CONFIG["intent_max_tokens"],
             )
-            raw = resp.choices[0].message.content.strip().upper()
+            raw = resp.choices[0].message.content.strip()
 
-            # Extract the intent label from the response
+            # ── Robust JSON extraction ───────────────────────────────
+            cleaned = raw
+            if "```" in raw:
+                matches = re.findall(r"```(?:json)?\s*(.*?)\s*```", raw, re.DOTALL)
+                if matches:
+                    cleaned = matches[0]
+
+            try:
+                data = json.loads(cleaned)
+                if isinstance(data, dict):
+                    intent_val = str(data.get("intent", "")).upper()
+                    suggested_ns = data.get("namespace")
+
+                    found_intent = INTENT_RETRIEVE
+                    for intent in VALID_INTENTS:
+                        if intent == intent_val:
+                            found_intent = intent
+                            break
+
+                    logger.info(
+                        "Intent classified via JSON: '%s' → %s (Suggested NS: %s)",
+                        query[:60], found_intent, suggested_ns,
+                    )
+                    self._suggested_namespace = suggested_ns
+                    return found_intent
+
+            except (json.JSONDecodeError, ValueError):
+                pass  # fall through to string-search fallback
+
+            # Fallback: simple string search in raw response
+            raw_upper = raw.upper()
             for intent in VALID_INTENTS:
-                if intent in raw:
-                    logger.info("Intent classified: '%s' → %s", query[:60], intent)
+                if intent in raw_upper:
+                    logger.info("Intent classified via text fallback: %s", intent)
                     return intent
 
             logger.warning(
-                "Intent classifier returned unknown label '%s' — defaulting to RETRIEVE",
-                raw,
+                "Intent classifier returned unparseable response — defaulting to RETRIEVE",
             )
             return INTENT_RETRIEVE
 
         except Exception as exc:
             logger.warning("Intent classification failed: %s — defaulting to RETRIEVE", exc)
             return INTENT_RETRIEVE
+
+    def get_suggested_namespace(self) -> Optional[str]:
+        """Get the namespace suggested by the LLM during classification."""
+        return getattr(self, '_suggested_namespace', None)
+
+    def clear_suggestions(self) -> None:
+        """Clear the suggested namespace."""
+        if hasattr(self, '_suggested_namespace'):
+            self._suggested_namespace = None
 
     def get_fast_response(self) -> Optional[str]:
         """Get pre-defined response from fast-path (if available)."""

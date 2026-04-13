@@ -101,7 +101,17 @@ class AgenticRAGGraph:
         state.intent = self.intent_classifier.classify(
             state.user_query, state.chat_history,
         )
-        state.log_step("classify_intent", intent=state.intent)
+
+        # Capture suggested namespace (intelligent switching)
+        suggested_ns = self.intent_classifier.get_suggested_namespace()
+        if suggested_ns and suggested_ns != state.namespace:
+            old_ns = state.namespace
+            state.namespace = suggested_ns
+            logger.info("Agentic Namespace Switch: %s → %s", old_ns, suggested_ns)
+            state.log_step("namespace_switch", from_ns=old_ns, to_ns=suggested_ns)
+        
+        self.intent_classifier.clear_suggestions()
+        state.log_step("classify_intent", intent=state.intent, final_namespace=state.namespace)
 
     def _node_direct_answer(self, state: AgentState) -> None:
         """Node: Answer directly without retrieval (greetings, meta questions)."""

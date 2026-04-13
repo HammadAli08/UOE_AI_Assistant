@@ -174,6 +174,6 @@ class ChunkGrader:
 
         logger.warning("Could not parse batch grades, accepting all chunks")
         return [
-            {"relevant": True, "confidence": 0.5, "reason": "Parse failure fallback"}
+            {"relevant": True, "confidence": 0.75, "reason": "Parse failure fallback"}
             for _ in range(expected)
         ]

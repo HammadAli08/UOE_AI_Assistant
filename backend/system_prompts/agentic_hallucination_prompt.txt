@@ -44,9 +44,9 @@ Respond with ONLY a valid JSON object. No markdown, no explanation.
 
 {{
   "verdict": "grounded",
-  "score": 0.0,
+  "score": 1.0,
   "ungrounded_claims": [],
-  "reasoning": "one sentence explaining your verdict"
+  "reasoning": "The answer is fully supported by Sources 1 and 2."
 }}
 
 Valid verdict values: grounded, partial, ungrounded

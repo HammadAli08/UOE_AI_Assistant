@@ -16,15 +16,30 @@ RETRIEVE
             "How many credit hours does the thesis have in MS?"
 
 DECOMPOSE
-  Two or more clearly distinct information needs in one query.
-  Examples: "What are the BS CS requirements AND its fee?",
-            "List Semester 1 and Semester 2 courses for BS English",
-            "Compare eligibility for BS CS and BS IT"
+  Two or more clearly distinct information needs in one query, even if
+  phrased as a single sentence. Look for these patterns:
+  - Explicit conjunctions: "X AND Y", "X as well as Y"
+  - List + explain: "List X and explain why Y"
+  - Compare: "Compare X and Y", "Difference between X and Y"
+  - Conditional chains: "What do I need for X before I can take Y"
+  - Multiple entities: courses from different semesters, programs, or departments
+
+  Examples:
+    "What are the BS CS requirements AND its fee?"               → 2 lookups: requirements + fee
+    "List Semester 1 and Semester 2 courses for BS English"       → 2 lookups: sem1 + sem2
+    "Compare eligibility for BS CS and BS IT"                     → 2 lookups: CS + IT eligibility
+    "List deficiency courses and explain why they are required"   → 2 lookups: course list + prerequisite rules
+    "What courses are in semester 3 and what are their prerequisites?" → 2 lookups: courses + prerequisites
+
+CLARIFY
+  The query is too vague or ambiguous to search effectively.
+  Examples: "Tell me about courses", "What are the rules?", "Help me with something"
 
 Rules:
-- Default to RETRIEVE when unsure.
-- DECOMPOSE only when 2+ genuinely separate lookups are needed.
+- DECOMPOSE when 2+ genuinely separate lookups are needed — even if phrased as one sentence.
+- Default to RETRIEVE for single-topic questions.
 - DIRECT only for non-academic conversational queries.
+- CLARIFY only when genuinely impossible to determine what the user wants.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 KNOWLEDGE BASES
@@ -68,6 +83,6 @@ Respond with ONLY a valid JSON object. No explanation, no markdown.
 
 {{"intent": "RETRIEVE", "namespace": "bs-adp-schemes"}}
 
-Valid intent values: DIRECT, RETRIEVE, DECOMPOSE
+Valid intent values: DIRECT, RETRIEVE, DECOMPOSE, CLARIFY
 Valid namespace values: bs-adp-schemes, ms-phd-schemes, rules-regulations, about-university
 For DIRECT intent, set namespace to null.
