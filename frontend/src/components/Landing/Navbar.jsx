@@ -31,9 +31,9 @@ function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled
-        ? 'bg-[#0a0f1a]/90 backdrop-blur-2xl border-b border-white/[0.06] shadow-[0_4px_30px_rgba(0,0,0,0.4)]'
-        : 'bg-transparent'
+      className={`fixed top-0 left-0 right-0 z-50 bg-[#0a0f1a] transition-all duration-500 ${scrolled
+        ? 'border-b border-white/[0.06] shadow-[0_4px_30px_rgba(0,0,0,0.4)]'
+        : ''
         }`}
     >
       {/* Glow line */}
