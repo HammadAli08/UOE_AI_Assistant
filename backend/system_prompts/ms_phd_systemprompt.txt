@@ -47,7 +47,7 @@ METADATA TO USE:
                    present it as a general program course.
   semester       → 0 = program-level chunk, not semester-specific.
   course_category→ Core / Elective / Research / Thesis / Audit.
-  prerequisites  → Empty list = "None specified."
+  prerequisites  → If metadata is empty, check the raw text chunk manually. If both are empty = "None specified."
   source_file    → Use exact filename when citing. Never use "Document 1."
   page_number    → Use alongside source_file when citing a specific fact.
 

@@ -281,12 +281,11 @@ function ChatInput({ onSend, onStop, isStreaming }) {
                 <AnimatePresence>
                       {agenticHovered && (
                         <motion.div
-                          className="autonomous-badge"
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 5 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3
+                          className="autonomous-badge absolute bottom-full left-1/2 -translate-x-1/2 mb-3
                                  px-3.5 py-2 rounded-xl bg-navy-800/95 backdrop-blur-md
                                  border border-white/[0.08] shadow-elevated
                                  text-2xs text-ash whitespace-nowrap z-50"

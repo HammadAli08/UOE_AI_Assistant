@@ -188,24 +188,20 @@ function HeroSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative min-h-dvh flex flex-col items-center justify-center px-6 pt-20 pb-12 overflow-hidden"
+      className="hero hero-edge-photos relative min-h-dvh flex flex-col items-center justify-center px-6 pt-20 pb-12 overflow-visible bg-cover bg-center bg-no-repeat"
     >
       {/* ── Background layers ── */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800" />
+      <div className="absolute inset-0 pointer-events-none z-0">
         <div
-          className="absolute top-[15%] left-1/2 -translate-x-1/2 w-[1000px] h-[700px]
-                     rounded-full blur-[160px] animate-glow-pulse"
+          className="absolute top-[15%] left-1/2 -translate-x-1/2 w-[1000px] h-[700px] rounded-full blur-[160px] animate-glow-pulse"
           style={{ background: 'radial-gradient(circle, rgba(200,185,74,0.08) 0%, transparent 70%)' }}
         />
         <div
-          className="absolute -bottom-32 -left-32 w-[600px] h-[500px]
-                     rounded-full blur-[120px] opacity-40"
+          className="absolute -bottom-32 -left-32 w-[600px] h-[500px] rounded-full blur-[120px] opacity-40"
           style={{ background: 'radial-gradient(circle, rgba(140,147,64,0.12) 0%, transparent 70%)' }}
         />
         <div
-          className="absolute top-[30%] right-[-10%] w-[500px] h-[500px]
-                     rounded-full blur-[130px] opacity-30"
+          className="absolute top-[30%] right-[-10%] w-[500px] h-[500px] rounded-full blur-[130px] opacity-30"
           style={{ background: 'radial-gradient(circle, rgba(100,120,200,0.06) 0%, transparent 70%)' }}
         />
         <div
@@ -216,9 +212,8 @@ function HeroSection() {
             backgroundSize: '72px 72px',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-transparent to-navy-950/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-transparent to-navy-950/60 z-[5]" />
       </div>
-
       {/* ── Content with spring parallax ── */}
       <motion.div
         style={{ y: heroY }}
@@ -242,12 +237,12 @@ function HeroSection() {
         {/* Status badge */}
         <motion.div {...springUp(0.1)} className="mb-4">
           <span
-            className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full
+            className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full
                        border border-white/[0.07] bg-white/[0.025] backdrop-blur-sm
-                       text-sm font-semibold text-ash tracking-[0.15em] uppercase"
+                       text-base font-semibold text-ash tracking-[0.12em] uppercase"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-mustard-500 animate-pulse" />
-            AI-Powered Academic Assistant
+            AI-Based Academics and Regulations Assistant
           </span>
         </motion.div>
 

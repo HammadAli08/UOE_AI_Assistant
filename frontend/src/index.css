@@ -296,6 +296,59 @@
     pointer-events: none;
     filter: blur(120px);
   }
+
+  /* Layout + rhythm system */
+  .section-shell {
+    @apply max-w-6xl xl:max-w-7xl mx-auto px-6 sm:px-8;
+  }
+
+  .section-pad {
+    @apply py-16 lg:py-24;
+  }
+
+  .section-header {
+    @apply text-center max-w-3xl mx-auto flex flex-col gap-4;
+  }
+
+  .section-label {
+    @apply text-sm font-semibold uppercase tracking-[0.22em] text-mustard-400;
+  }
+
+  .section-title {
+    @apply text-3xl sm:text-4xl font-display font-bold text-cream;
+  }
+
+  .section-sub {
+    @apply text-base sm:text-lg text-ash leading-relaxed;
+  }
+
+  .section-grid {
+    @apply grid gap-6 md:gap-8 items-stretch;
+  }
+
+  .card-surface {
+    @apply h-full rounded-2xl bg-navy-950 border border-white/[0.06] p-6 md:p-7;
+  }
+
+  .section-full {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+  }
+
+  .section-stack {
+    @apply flex flex-col gap-12 md:gap-14 w-full;
+  }
+
+  /* Hero single background image with overlay */
+  .hero-edge-photos {
+    position: relative;
+    overflow: visible;
+    background-image: linear-gradient(rgba(5, 10, 20, 0.88), rgba(5, 10, 20, 0.88)), url('/library.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
 }
 
 /* ═══════ Keyframes (outside layers so always present) ═══════ */

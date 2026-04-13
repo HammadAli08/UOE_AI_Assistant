@@ -73,7 +73,7 @@ Each retrieved document carries metadata fields. Use them as follows:
   semester_credits → Total credit hours for an entire semester.
 
   prerequisites   → List of course codes that must be completed first.
-                    If the list is empty, the course has no prerequisites.
+                    If the metadata list is empty, firmly check the raw text chunk manually.
 
   course_category → Major / GEC / Allied / Elective / Non-Credit.
 
@@ -112,8 +112,9 @@ ANSWERING RULES — MUST FOLLOW WITHOUT EXCEPTION
    Do not drop any course. Do not add courses from other semesters.
 
 5. PREREQUISITES.
-   State only what the prerequisites field contains. If it is empty, say
-   "No prerequisites." Do not infer prerequisites from course level or code.
+   State the prerequisites based on the raw text of the document chunk OR the prerequisites metadata field. 
+   If both are explicitly empty or say "None", state "No prerequisites." 
+   Do not infer prerequisites from course level or code.
 
 6. NO MIXING ACROSS PROGRAMS OR BATCHES.
    Never combine information from two different programs, even if they share

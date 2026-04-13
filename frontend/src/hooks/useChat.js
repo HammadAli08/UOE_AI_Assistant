@@ -208,7 +208,7 @@ export default function useChat() {
             } catch (fallbackErr) {
               if (fallbackErr.name === 'AbortError') return;
               addAssistantMessage(
-                'Sorry, I encountered an error processing your request. Please try again.',
+                'The server is currently busy. Please try again later.',
                 {}
               );
             }
@@ -220,7 +220,7 @@ export default function useChat() {
           stopPump();
           resetQueue();
           addAssistantMessage(
-            'Sorry, I encountered an error processing your request. Please try again.',
+            'The server is currently busy. Please try again later.',
             {}
           );
         }
