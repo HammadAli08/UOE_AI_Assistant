@@ -3,20 +3,26 @@
 // ──────────────────────────────────────────
 import { memo, useRef, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Square, AlertCircle, ChevronUp, Zap, Clock } from 'lucide-react';
+import { Send, Square, AlertCircle, ChevronUp, Zap, Clock, Mic, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 import useAutoResize from '@/hooks/useAutoResize';
 import useChatStore from '@/store/useChatStore';
-import { MAX_QUERY_LENGTH, MAX_TURNS, NAMESPACES } from '@/constants';
+import { MAX_QUERY_LENGTH, MAX_TURNS, NAMESPACES, API_BASE } from '@/constants';
 
 function ChatInput({ onSend, onStop, isStreaming }) {
   const [value, setValue] = useState('');
   const [showNsPicker, setShowNsPicker] = useState(false);
-  const [agenticHovered, setAgenticHovered] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef(null);
   const nsPickerRef = useRef(null);
-  const resize = useAutoResize(textareaRef, 160);
+  const resize = useAutoResize(textareaRef, 200);
+
+  const [vttState, setVttState] = useState('idle'); // 'idle' | 'listening' | 'transcribing'
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const maxDurationTimerRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const rafIdRef = useRef(null);
 
   // Scroll chat to bottom on input focus (mobile keyboard)
   useEffect(() => {
@@ -77,6 +83,122 @@ function ChatInput({ onSend, onStop, isStreaming }) {
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
   }, [canSend, value, onSend]);
 
+  const stopRecordingAndTranscribe = useCallback(async () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setVttState('listening');
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      // VAD setup
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const audioCtx = new AudioCtx();
+      audioContextRef.current = audioCtx;
+      const analyser = audioCtx.createAnalyser();
+      analyserRef.current = analyser;
+      analyser.fftSize = 512;
+      analyser.minDecibels = -50; // tuned
+      analyser.maxDecibels = -10;
+      analyser.smoothingTimeConstant = 0.4;
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      let lastVoiceTime = Date.now();
+
+      const checkSilence = () => {
+        if (mediaRecorderRef.current?.state !== 'recording') return;
+        analyser.getByteFrequencyData(dataArray);
+
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const average = sum / bufferLength;
+        const isSpeaking = average > 15;
+
+        if (isSpeaking) {
+          lastVoiceTime = Date.now();
+        }
+
+        if (Date.now() - lastVoiceTime > 1500) {
+          // 1.5s silence detected -> Auto stop
+          stopRecordingAndTranscribe();
+        } else {
+          rafIdRef.current = requestAnimationFrame(checkSilence);
+        }
+      };
+
+      checkSilence();
+
+      // Max 15s duration cap
+      maxDurationTimerRef.current = setTimeout(() => {
+        stopRecordingAndTranscribe();
+      }, 15000);
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        cancelAnimationFrame(rafIdRef.current);
+        clearTimeout(maxDurationTimerRef.current);
+
+        if (audioContextRef.current?.state !== 'closed') {
+          audioContextRef.current?.close();
+        }
+
+        stream.getTracks().forEach(t => t.stop());
+
+        if (audioChunksRef.current.length === 0) {
+          setVttState('idle');
+          return;
+        }
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setVttState('transcribing');
+
+        try {
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+
+          const res = await fetch(`${API_BASE}/transcribe`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!res.ok) throw new Error('Transcription failed');
+          const data = await res.json();
+          if (data.text) {
+             setValue(prev => (prev ? prev + ' ' + data.text : data.text));
+             resize();
+             if (textareaRef.current) textareaRef.current.focus();
+          }
+        } catch (error) {
+          console.error("VTT Error:", error);
+        } finally {
+          setVttState('idle');
+        }
+      };
+
+      mediaRecorder.start();
+    } catch (err) {
+      console.error("Microphone access denied or error:", err);
+      // Fail silently and revert state to keep UI clean
+      setVttState('idle');
+    }
+  }, [stopRecordingAndTranscribe, resize]);
+
   const handleKeyDown = useCallback(
     (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -107,8 +229,8 @@ function ChatInput({ onSend, onStop, isStreaming }) {
   };
 
   return (
-    <div className="w-full flex-shrink-0 md:relative fixed bottom-0 left-0 right-0 md:bottom-auto md:left-auto md:right-auto bg-navy-900/80 backdrop-blur-md border-t border-white/6 safe-bottom:pb-[env(safe-area-inset-bottom)] z-30">
-      <div className="max-w-4xl mx-auto flex flex-col px-2 sm:px-6 pt-4 pb-3">
+    <div className="w-full flex-shrink-0 md:relative fixed bottom-0 left-0 right-0 md:bottom-auto md:left-auto md:right-auto bg-surface-1 border-t border-surface-border safe-bottom:pb-[env(safe-area-inset-bottom)] z-30">
+      <div className="max-w-[900px] mx-auto flex flex-col px-3 sm:px-6 lg:px-8 pt-3 pb-3">
         {/* ── Alerts ── */}
         {atMaxTurns && (
           <div className="flex items-center gap-2 mb-3 px-4 py-2.5 rounded-xl bg-mustard-500/[0.08] border border-mustard-500/20 text-mustard-400 text-xs">
@@ -124,17 +246,14 @@ function ChatInput({ onSend, onStop, isStreaming }) {
           </div>
         )}
 
-        {/* ── Glass input panel with breathing glow on focus ── */}
-        <motion.div
-          animate={isFocused && !overLimit ? { scale: [1, 1.005, 1] } : {}}
-          transition={{ duration: 2.5, repeat: Infinity }}
+        {/* ── Input panel — solid surface, static focus ── */}
+        <div
           className={clsx(
-            'rounded-2xl border backdrop-blur-xl transition-all duration-400',
-            'bg-white/[0.03]',
-            isFocused && !overLimit && 'input-glow-active',
+            'rounded-xl border transition-colors duration-300',
+            'bg-surface-2 shadow-[0_2px_8px_rgba(0,0,0,0.25)]',
             overLimit
               ? 'border-red-500/40'
-              : 'border-white/[0.07] focus-within:border-mustard-500/30'
+              : 'border-surface-border focus-within:border-surface-border-hover'
           )}
         >
           {/* Textarea */}
@@ -143,15 +262,19 @@ function ChatInput({ onSend, onStop, isStreaming }) {
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder={currentPlaceholder}
-            disabled={atMaxTurns}
+            placeholder={vttState === 'listening' ? 'Listening...' : vttState === 'transcribing' ? 'Transcribing...' : currentPlaceholder}
+            disabled={atMaxTurns || vttState !== 'idle'}
             rows={1}
             aria-label="Type your question here"
             aria-multiline="true"
-            className="w-full bg-transparent text-sm text-cream font-body placeholder:text-mist/70 px-4 pt-4 pb-2 resize-none outline-none min-h-[48px] max-h-[160px] disabled:opacity-40 disabled:cursor-not-allowed"
+            className={clsx(
+              "w-full bg-transparent text-[0.9375rem] text-textWhite font-body placeholder:text-mist/60 px-4 pt-3.5 pb-2 resize-none outline-none min-h-[48px] max-h-[200px] overflow-y-auto disabled:opacity-40 disabled:cursor-not-allowed",
+              (vttState === 'listening' || vttState === 'transcribing') && 'animate-pulse text-mustard-400 placeholder:text-mustard-400/60'
+            )}
           />
+
+          {/* Divider between textarea and toolbar */}
+          <div className="mx-3 h-px bg-surface-border/60" />
 
           {/* Bottom row inside panel: namespace · char count · Agentic RAG pill · Send */}
           <div className="agentic-parent relative flex items-center justify-between px-3 pb-3 overflow-visible">
@@ -187,9 +310,10 @@ function ChatInput({ onSend, onStop, isStreaming }) {
                       animate={{ opacity: 1, y: 0, height: 'auto' }}
                       exit={{ opacity: 0, y: 10, height: 0 }}
                       transition={{ duration: 0.2 }}
+                      style={{ backfaceVisibility: 'hidden' }}
                       className="absolute bottom-full left-0 mb-2 w-60 rounded-xl
-                                 bg-navy-700/95 backdrop-blur-xl border border-white/[0.08]
-                                 shadow-elevated overflow-hidden"
+                                 bg-navy-700/95 backdrop-blur-xl ring-1 ring-inset ring-white/[0.08]
+                                 shadow-elevated overflow-hidden z-50 flex-shrink-0"
                     >
                       <div className="p-1.5">
                         <p className="px-3 py-2 text-2xs font-semibold uppercase tracking-[0.15em] text-mist">
@@ -237,23 +361,22 @@ function ChatInput({ onSend, onStop, isStreaming }) {
             </div>
 
             {/* Right: Agentic toggle + Send */}
-            <div className="flex items-center gap-2.5">
+            <div 
+              className="flex items-center gap-2.5 flex-shrink-0"
+              style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+            >
               {/* ── Agentic RAG pill toggle with enable animation ── */}
-              <div
-                className="agentic-badge relative z-20"
-                onMouseEnter={() => setAgenticHovered(true)}
-                onMouseLeave={() => setAgenticHovered(false)}
-              >
+              <div className="agentic-badge relative z-20 flex-shrink-0">
                 <motion.button
                   onClick={toggleAgentic}
                   aria-pressed={settings.enableAgentic}
                   aria-label={settings.enableAgentic ? 'Disable Agentic RAG (autonomous retrieval)' : 'Enable Agentic RAG (autonomous retrieval)'}
                   className={clsx(
                     'group flex items-center gap-1.5 px-3.5 py-[7px] rounded-full text-xs font-medium',
-                    'border transition-all duration-500 ease-out select-none',
+                    'ring-1 ring-inset transition-all duration-500 ease-out select-none',
                     settings.enableAgentic
-                      ? 'bg-mustard-500/[0.14] text-mustard-400 border-mustard-500/25 shadow-glow-sm'
-                      : 'bg-white/[0.03] text-mist border-white/[0.08] hover:border-white/[0.14] hover:text-ash'
+                      ? 'bg-mustard-500/[0.14] text-mustard-400 ring-mustard-500/25 shadow-glow-sm'
+                      : 'bg-white/[0.03] text-mist ring-white/[0.08] hover:ring-white/[0.14] hover:text-ash'
                   )}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -276,74 +399,66 @@ function ChatInput({ onSend, onStop, isStreaming }) {
                     )}
                   />
                 </motion.button>
-
-                {/* Tooltip */}
-                <AnimatePresence>
-                      {agenticHovered && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 5 }}
-                          transition={{ duration: 0.15 }}
-                          className="autonomous-badge absolute bottom-full left-1/2 -translate-x-1/2 mb-3
-                                 px-3.5 py-2 rounded-xl bg-navy-800/95 backdrop-blur-md
-                                 border border-white/[0.08] shadow-elevated
-                                 text-2xs text-ash whitespace-nowrap z-50"
-                        >
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-3 h-3 text-mustard-500 flex-shrink-0" />
-                        <span>Autonomous retrieval · Classifies intent first</span>
-                      </div>
-                      {/* Arrow */}
-                      <div
-                        className="absolute -bottom-[5px] left-1/2 -translate-x-1/2
-                                   w-2.5 h-2.5 bg-navy-800/95 border-r border-b border-white/[0.08]
-                                   rotate-45 rounded-br-sm"
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
 
-              {/* ── Send / Stop button with diagonal movement ── */}
-              {isStreaming ? (
-                <motion.button
-                  onClick={onStop}
-                  whileTap={{ scale: 0.9 }}
-                  className="w-9 h-9 rounded-full bg-red-500/70 hover:bg-red-500
-                             flex items-center justify-center text-white
-                             transition-all duration-300"
-                  aria-label="Stop generating response"
-                  title="Stop generating"
-                >
-                  <Square className="w-3.5 h-3.5" aria-hidden="true" />
-                </motion.button>
-              ) : (
-                <motion.button
-                  onClick={handleSubmit}
-                  disabled={!canSend}
-                  whileHover={canSend ? { scale: 1.05 } : {}}
-                  whileTap={canSend ? { scale: 0.95 } : {}}
-                  className={clsx(
-                    'group w-9 h-9 rounded-full flex items-center justify-center',
-                    'transition-all duration-400',
-                    canSend
-                      ? 'bg-mustard-500 hover:bg-mustard-400 text-navy-950 shadow-glow-sm hover:shadow-glow'
-                      : 'bg-white/[0.05] text-mist/40 cursor-not-allowed'
-                  )}
-                  title="Send message"
-                >
-                  <motion.div
-                    animate={canSend ? { rotate: -45 } : { rotate: 0 }}
-                    transition={{ duration: 0.3 }}
+              {/* ── Action Buttons ── */}
+              <div className="flex items-center gap-1.5">
+                {/* VTT Button */}
+                {!isStreaming && (
+                  <button
+                    onClick={vttState === 'listening' ? stopRecordingAndTranscribe : startRecording}
+                    disabled={vttState === 'transcribing' || atMaxTurns || apiOnline === false}
+                    className={clsx(
+                      'w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300',
+                      vttState === 'listening'
+                        ? 'bg-mustard-500/20 text-mustard-400 ring-1 ring-mustard-500/50 shadow-glow-sm animate-pulse'
+                        : vttState === 'transcribing'
+                        ? 'bg-surface-3 text-mustard-500 cursor-wait'
+                        : 'bg-surface-2 text-mist hover:text-white hover:bg-surface-3 disabled:opacity-40'
+                    )}
+                    title={vttState === 'listening' ? "Stop recording" : "Voice to text"}
+                    aria-label="Voice to text"
                   >
-                    <Send className="w-4 h-4" />
-                  </motion.div>
-                </motion.button>
-              )}
+                    {vttState === 'transcribing' ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Mic className={clsx('w-4 h-4 transition-transform duration-200', vttState === 'listening' && 'scale-110')} />
+                    )}
+                  </button>
+                )}
+
+                {/* ── Send / Stop button with diagonal movement ── */}
+                {isStreaming ? (
+                  <button
+                    onClick={onStop}
+                    className="w-8 h-8 rounded-lg bg-red-500/80 hover:bg-red-500
+                               flex items-center justify-center text-white
+                               transition-colors duration-200 active:scale-95"
+                    aria-label="Stop generating response"
+                    title="Stop generating"
+                  >
+                    <Square className="w-3.5 h-3.5" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!canSend}
+                    className={clsx(
+                      'w-8 h-8 rounded-lg flex items-center justify-center',
+                      'transition-all duration-200 active:scale-95',
+                      canSend
+                        ? 'bg-gold hover:brightness-110 text-navy-950'
+                        : 'bg-surface-3 text-mist/30 cursor-not-allowed'
+                    )}
+                    title="Send message"
+                  >
+                    <Send className={clsx('w-4 h-4 transition-transform duration-200', canSend && '-rotate-45')} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* ── Bottom status bar with pulsing online indicator ── */}
         <div className="flex items-center justify-between mt-2 px-1">

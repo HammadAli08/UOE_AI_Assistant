@@ -123,21 +123,27 @@ class Retriever:
         self,
         query: str,
         namespace: str,
-        top_k: int = DEFAULT_TOP_K_RETRIEVE
+        top_k: int = DEFAULT_TOP_K_RETRIEVE,
+        metadata_filter: Optional[Dict] = None,
     ) -> List[Dict]:
         """
         Retrieve relevant documents from Pinecone.
-        
+
         Args:
             query: The search query
             namespace: Pinecone namespace to search in
             top_k: Number of results to retrieve
-            
+            metadata_filter: Optional Pinecone metadata filter dict.
+                             When provided, Pinecone performs filtered
+                             vector search (filter FIRST, then rank).
+
         Returns:
             List of document dictionaries with id, score, text, metadata
         """
         normalized = self._normalize_query(query)
-        cache_key = (namespace, normalized, int(top_k))
+        # Include filter in cache key so filtered vs unfiltered don't collide
+        filter_key = str(sorted(metadata_filter.items())) if metadata_filter else ""
+        cache_key = (namespace, normalized, int(top_k), filter_key)
         cached_docs = self._cache_get(self._retrieval_cache, cache_key, RETRIEVAL_CACHE_TTL_SECONDS)
         if cached_docs is not None:
             return cached_docs
@@ -147,14 +153,23 @@ class Retriever:
         query_embedding = self._embed_query(query)
         embed_seconds = time.perf_counter() - t_embed
 
+        # Build Pinecone query kwargs
+        query_kwargs: Dict[str, Any] = {
+            "vector": query_embedding,
+            "namespace": namespace,
+            "top_k": top_k,
+            "include_metadata": True,
+        }
+        if metadata_filter:
+            query_kwargs["filter"] = metadata_filter
+            logger.info(
+                "🔎 Filtered retrieve: namespace=%s filter=%s top_k=%d",
+                namespace, metadata_filter, top_k,
+            )
+
         # Search in specific namespace only (strict isolation)
         t_query = time.perf_counter()
-        results = self.index.query(
-            vector=query_embedding,
-            namespace=namespace,
-            top_k=top_k,
-            include_metadata=True
-        )
+        results = self.index.query(**query_kwargs)
         query_seconds = time.perf_counter() - t_query
 
         # Convert to document format
@@ -177,11 +192,12 @@ class Retriever:
 
         self._cache_set(self._retrieval_cache, cache_key, documents)
         logger.debug(
-            "Retriever timings: embed=%.2fs pinecone=%.2fs top_k=%d namespace=%s",
+            "Retriever timings: embed=%.2fs pinecone=%.2fs top_k=%d namespace=%s filter=%s",
             embed_seconds,
             query_seconds,
             top_k,
             namespace,
+            bool(metadata_filter),
         )
         return documents
 
@@ -193,9 +209,75 @@ class Retriever:
         query: str,
         namespace: str,
         top_k: int = DEFAULT_TOP_K_RETRIEVE,
+        metadata_filter: Optional[Dict] = None,
     ) -> List[Dict]:
         """Dense-only ensemble stub: return top_k dense results (no RRF/BM25)."""
-        return self.retrieve(query, namespace, top_k)
+        return self.retrieve(query, namespace, top_k, metadata_filter=metadata_filter)
+
+    # ── Filter-first retrieval with progressive relaxation ──
+
+    @traceable(name="retriever.filtered_retrieve", run_type="retriever")
+    def filtered_retrieve(
+        self,
+        query: str,
+        namespace: str,
+        filter_stages: List[Dict],
+        top_k: int = DEFAULT_TOP_K_RETRIEVE,
+    ) -> Tuple[List[Dict], Dict, str]:
+        """
+        Filter-first retrieval with progressive relaxation.
+
+        Tries each filter stage in order. If a stage returns results,
+        returns them immediately. If not, relaxes to the next stage.
+
+        Args:
+            query: Search query (already enhanced)
+            namespace: Pinecone namespace
+            filter_stages: List of progressively relaxed filter dicts
+                          (from ParsedQuery.relaxed_filters())
+            top_k: Number of results per stage
+
+        Returns:
+            Tuple of (documents, filter_used, retrieval_quality)
+            retrieval_quality is one of:
+                'FILTERED'  — results matched the primary filter
+                'RELAXED'   — results required filter relaxation
+                'SEMANTIC'  — no filter worked, pure semantic fallback
+        """
+        for i, stage_filter in enumerate(filter_stages):
+            is_last = (i == len(filter_stages) - 1)
+            is_empty = not stage_filter
+
+            documents = self.ensemble_retrieve(
+                query=query,
+                namespace=namespace,
+                top_k=top_k,
+                metadata_filter=stage_filter if stage_filter else None,
+            )
+
+            if documents:
+                if i == 0:
+                    quality = "FILTERED"
+                elif is_empty:
+                    quality = "SEMANTIC"
+                else:
+                    quality = "RELAXED"
+
+                logger.info(
+                    "✅ filtered_retrieve: stage=%d/%d quality=%s docs=%d filter=%s",
+                    i + 1, len(filter_stages), quality, len(documents),
+                    stage_filter or "(none)",
+                )
+                return documents, stage_filter, quality
+
+            logger.info(
+                "⚠️ filtered_retrieve: stage=%d/%d returned 0 docs, relaxing. filter=%s",
+                i + 1, len(filter_stages), stage_filter or "(none)",
+            )
+
+        # Should not reach here (last stage is always empty = pure semantic)
+        logger.warning("filtered_retrieve: all stages exhausted, returning empty")
+        return [], {}, "SEMANTIC"
 
 
 # Singleton instance

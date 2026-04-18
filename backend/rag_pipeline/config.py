@@ -65,6 +65,13 @@ NAMESPACE_MAP = {
 
 VALID_NAMESPACES = list(NAMESPACE_MAP.keys())
 
+# Namespaces where metadata filter parsing is active
+# Only namespaces with structured metadata benefit from filter-first retrieval
+FILTER_ENABLED_NAMESPACES = [
+    "bs-adp-schemes",
+    "ms-phd-schemes",
+]
+
 # =============================================================================
 # SYSTEM PROMPTS
 # =============================================================================

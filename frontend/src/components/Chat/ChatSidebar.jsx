@@ -2,6 +2,7 @@
 // ChatSidebar — conversation history & user controls
 // ──────────────────────────────────────────
 import { memo, useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   MessageSquare,
@@ -18,6 +19,7 @@ import {
   Building2,
   ChevronRight,
   Menu,
+  Database,
 } from 'lucide-react';
 import clsx from 'clsx';
 import useChatStore from '@/store/useChatStore';
@@ -37,6 +39,7 @@ const NS_ICONS = {
 };
 
 function ChatSidebar() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const openAuthModal = useAuthStore((s) => s.openAuthModal);
   const signOut = useAuthStore((s) => s.signOut);
@@ -269,8 +272,8 @@ function ChatSidebar() {
           </button>
         </div>
 
-        {/* ── New Chat ── */}
-        <div className="px-3 pt-3 flex-shrink-0">
+        {/* ── Top Actions ── */}
+        <div className="px-3 pt-3 flex-shrink-0 space-y-2">
           <button
             onClick={handleNewChat}
             className={clsx(
@@ -289,6 +292,27 @@ function ChatSidebar() {
               sidebarMinimized ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'
             )}>
               New Chat
+            </span>
+          </button>
+
+          <button
+            onClick={() => { closeSidebar(); navigate('/knowledge-bases'); }}
+            className={clsx(
+              'w-full flex items-center gap-2 px-3 py-2.5 rounded-xl',
+              'border border-white/[0.08] bg-white/[0.01]',
+              'text-sm text-ash font-medium',
+              'hover:bg-white/[0.04] hover:text-cream hover:border-mustard-500/20',
+              'transition-all duration-300 active:scale-[0.98]',
+              sidebarMinimized && 'lg:justify-center'
+            )}
+            title={sidebarMinimized ? 'Knowledge Explorer' : undefined}
+          >
+            <Database className="w-4 h-4 text-mustard-500/70 flex-shrink-0" />
+            <span className={clsx(
+              'transition-all duration-500 overflow-hidden whitespace-nowrap',
+              sidebarMinimized ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'
+            )}>
+              Knowledge Explorer
             </span>
           </button>
         </div>
@@ -418,17 +442,17 @@ function ChatSidebar() {
                         ) : (
                           <>
                             <span className="flex-1 truncate text-sm">{convo.title}</span>
-                            <div className="flex items-center gap-1">
+                            <div className="hidden group-hover:flex items-center gap-1">
                               <button
                                 onClick={(e) => handleStartRename(e, convo)}
-                                className="opacity-0 group-hover:opacity-100 p-1 rounded text-mist/60 hover:text-cream hover:bg-white/[0.08] transition-all duration-200"
+                                className="p-1 rounded text-mist/60 hover:text-cream hover:bg-white/[0.08] transition-all duration-200"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={(e) => handleDelete(e, convo.id)}
                                 disabled={deleting === convo.id}
-                                className="opacity-0 group-hover:opacity-100 p-1 rounded text-mist/60 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
+                                className="p-1 rounded text-mist/60 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>

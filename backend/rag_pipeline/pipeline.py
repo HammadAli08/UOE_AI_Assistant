@@ -31,8 +31,10 @@ from .config import (
     DEFAULT_TOP_K_RETRIEVE,
     OPENAI_API_KEY,
     OPENAI_CHAT_MODEL,
+    FILTER_ENABLED_NAMESPACES,
 )
 from .query_enhancer import get_query_enhancer
+from .query_filter_parser import get_query_filter_parser
 from .retriever import get_retriever
 from .generator import get_generator
 from .memory import get_memory
@@ -44,6 +46,8 @@ logger = logging.getLogger(__name__)
 # ═════════════════════════════════════════════════════════════════════════════
 # HELPER: build sources list from documents
 # ═════════════════════════════════════════════════════════════════════════════
+
+import re
 
 def _extract_sources(docs: List[Dict]) -> List[Dict]:
     sources = []
@@ -58,6 +62,19 @@ def _extract_sources(docs: List[Dict]) -> List[Dict]:
         })
     return sources
 
+def _handle_chitchat(query: str) -> Optional[str]:
+    q = query.lower().strip()
+    q = re.sub(r'[^\w\s]', '', q)
+    if q in ["hi", "hello", "hey", "greetings", "salam", "assalam o alaikum", "assalamualaikum"]:
+        return "Hello! How can I help you today?"
+    if q in ["how are you", "how are you doing", "whats up"]:
+        return "I am all good! How can I help you?"
+    if q in ["who are you", "what are you"]:
+        return "I am the UOE AI Assistant. I can help you with queries related to university admissions, scheme of studies, and regulations."
+    if q in ["thank you", "thanks", "ok", "okay", "great", "nice", "good"]:
+        return "You're welcome! Let me know if you need anything else."
+    return None
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # RAG PIPELINE
@@ -69,6 +86,7 @@ class RAGPipeline:
 
     def __init__(self):
         self.query_enhancer = get_query_enhancer()
+        self.filter_parser = get_query_filter_parser()
         self.retriever = get_retriever()
         self.generator = get_generator()
         self.memory = get_memory()
@@ -249,6 +267,17 @@ class RAGPipeline:
 
         chat_history = self._resolve_chat_history(session_id, chat_history)
 
+        chitchat_response = _handle_chitchat(user_query)
+        if chitchat_response:
+            if session_id:
+                self.memory.add_turn(session_id, user_query, chitchat_response)
+            return {
+                "answer": chitchat_response, "sources": [],
+                "enhanced_query": user_query,
+                "namespace": namespace, "session_id": session_id,
+                "smart_info": None, "agentic_info": None, "run_id": None,
+            }
+
         # ── Query enhancement ────────────────────────────────────
         enhanced_query = user_query
         smart_info = None
@@ -263,6 +292,20 @@ class RAGPipeline:
         # The retrieval query: use enhanced if available, else raw
         retrieval_query = enhanced_query
 
+        # ── Metadata filter parsing (rule-based, zero latency) ────
+        parsed_query = None
+        filter_info = None
+        if pinecone_namespace in FILTER_ENABLED_NAMESPACES:
+            parsed_query = self.filter_parser.parse(user_query, pinecone_namespace)
+            if parsed_query.has_filters:
+                filter_info = {
+                    "parsed": repr(parsed_query),
+                    "confidence": parsed_query.confidence,
+                    "matched_rules": parsed_query.matched_rules,
+                    "filter": parsed_query.to_pinecone_filter(),
+                }
+                logger.info("🎯 Filter parsed: %s", filter_info["parsed"])
+
         if enable_agentic:
             # AGENTIC PATH: autonomous intent routing + retrieval + grounding checks
             agentic_state = AgentState(
@@ -273,6 +316,7 @@ class RAGPipeline:
                 enhanced_query=retrieval_query,
                 top_k=top_k_retrieve,
                 current_query=retrieval_query,
+                filter_stages=parsed_query.relaxed_filters() if parsed_query else [],
             )
             agentic_state = self.agentic_graph.run(agentic_state)
             agentic_info = agentic_state.build_agentic_info()
@@ -296,6 +340,7 @@ class RAGPipeline:
                     "session_id": session_id,
                     "smart_info": smart_info,
                     "agentic_info": agentic_info,
+                    "filter_info": filter_info,
                     "run_id": run_id,
                 }
 
@@ -318,10 +363,16 @@ class RAGPipeline:
                     "session_id": session_id,
                     "smart_info": smart_info,
                     "agentic_info": agentic_info,
+                    "filter_info": filter_info,
                     "run_id": run_id,
                 }
 
-            documents = agentic_state.all_relevant
+            if agentic_state.intent == "DECOMPOSE":
+                documents = []
+                for sq in agentic_state.sub_query_results.values():
+                    documents.extend(sq["all_relevant"])
+            else:
+                documents = agentic_state.all_relevant
         elif enable_smart:
             # SMART PATH: self-correcting retrieval loop
             smart_result = self._smart_retrieve(
@@ -354,12 +405,27 @@ class RAGPipeline:
                     "run_id": _run_id,
                 }
         else:
-            # STANDARD PATH: single retrieval (ensemble: dense + BM25 via RRF)
+            # STANDARD PATH: filter-first retrieval when filters available
             t_retrieve = time.perf_counter()
-            documents = self.retriever.ensemble_retrieve(
-                query=retrieval_query, namespace=pinecone_namespace, top_k=top_k_retrieve,
-            )
-            logger.info("⏱ retrieve: %.2fs  (docs=%d)", time.perf_counter() - t_retrieve, len(documents))
+            if parsed_query and parsed_query.has_filters:
+                documents, filter_used, retrieval_quality = self.retriever.filtered_retrieve(
+                    query=retrieval_query,
+                    namespace=pinecone_namespace,
+                    filter_stages=parsed_query.relaxed_filters(),
+                    top_k=top_k_retrieve,
+                )
+                if filter_info:
+                    filter_info["quality"] = retrieval_quality
+                    filter_info["filter_used"] = filter_used
+                logger.info(
+                    "⏱ filtered_retrieve: %.2fs  (docs=%d, quality=%s)",
+                    time.perf_counter() - t_retrieve, len(documents), retrieval_quality,
+                )
+            else:
+                documents = self.retriever.ensemble_retrieve(
+                    query=retrieval_query, namespace=pinecone_namespace, top_k=top_k_retrieve,
+                )
+                logger.info("⏱ retrieve: %.2fs  (docs=%d)", time.perf_counter() - t_retrieve, len(documents))
 
         if not documents:
             no_result = (
@@ -381,32 +447,58 @@ class RAGPipeline:
                 "namespace": namespace, "session_id": session_id,
                 "smart_info": smart_info,
                 "agentic_info": agentic_info,
+                "filter_info": filter_info,
                 "run_id": _run_id,
             }
 
-        # ── Use retrieved documents directly (top_k already applied by retriever) ──
-        final_docs = documents[:top_k_retrieve]
-
         # ── Generate ────────────────────────────────────────────────
         t_generate = time.perf_counter()
-        answer = self.generator.generate(
-            query=user_query, documents=final_docs, namespace=pinecone_namespace,
-            chat_history=chat_history, session_id=session_id, enhanced_query=enhanced_query,
-        )
-
-        if enable_agentic and agentic_state is not None:
+        
+        if enable_agentic and agentic_state is not None and agentic_state.intent == "DECOMPOSE":
+            full_answer_parts = []
+            final_sources = []
+            for sq_id, sq_data in agentic_state.sub_query_results.items():
+                sq_query = sq_data["final_query"]
+                sq_docs = sq_data["all_relevant"]
+                if not sq_docs:
+                    part_ans = f"**{sq_query}**\nSorry, insufficient data available to answer this part."
+                else:
+                    ans = self.generator.generate(
+                        query=sq_query, documents=sq_docs, namespace=pinecone_namespace,
+                        chat_history=chat_history, session_id=session_id, enhanced_query=sq_query,
+                    )
+                    # Isolated hallucination check per sub-query
+                    is_grnd, score, claims = self.agentic_graph.hallucination_guard.check(ans, sq_docs)
+                    if not is_grnd and score < 0.4:
+                        ans += "\n\n⚠️ *Note: Some details may not be directly verified from available documents.*"
+                    part_ans = f"**{sq_query}**\n{ans}"
+                    final_sources.extend(_extract_sources(sq_docs))
+                full_answer_parts.append(part_ans)
+                
+            answer = "\n\n---\n\n".join(full_answer_parts)
+            sources = final_sources
             agentic_state.answer = answer
-            agentic_state.sources = _extract_sources(final_docs)
-            agentic_state = self.agentic_graph.post_generation_check(agentic_state)
-            answer = agentic_state.answer
+            agentic_state.sources = sources
             agentic_info = agentic_state.build_agentic_info()
+            
+        else:
+            final_docs = documents[:top_k_retrieve]
+            answer = self.generator.generate(
+                query=user_query, documents=final_docs, namespace=pinecone_namespace,
+                chat_history=chat_history, session_id=session_id, enhanced_query=enhanced_query,
+            )
+            sources = _extract_sources(final_docs)
+            if enable_agentic and agentic_state is not None:
+                agentic_state.answer = answer
+                agentic_state.sources = sources
+                agentic_state = self.agentic_graph.post_generation_check(agentic_state)
+                answer = agentic_state.answer
+                agentic_info = agentic_state.build_agentic_info()
 
         logger.info("⏱ generate: %.2fs", time.perf_counter() - t_generate)
 
         if session_id:
             self.memory.add_turn(session_id, user_query, answer)
-
-        sources = _extract_sources(final_docs)
 
         # ── Capture LangSmith run_id for feedback linkage ────────
         run_id = None
@@ -426,6 +518,7 @@ class RAGPipeline:
             "namespace": namespace, "session_id": session_id,
             "smart_info": smart_info,
             "agentic_info": agentic_info,
+            "filter_info": filter_info,
             "run_id": run_id,
         }
 
@@ -446,6 +539,19 @@ class RAGPipeline:
 
         chat_history = self._resolve_chat_history(session_id, chat_history)
 
+        chitchat_response = _handle_chitchat(user_query)
+        if chitchat_response:
+            if session_id:
+                self.memory.add_turn(session_id, user_query, chitchat_response)
+            yield {
+                "type": "metadata", "sources": [],
+                "enhanced_query": user_query,
+                "namespace": namespace, "session_id": session_id,
+                "smart_info": None, "agentic_info": None, "run_id": None,
+            }
+            yield {"type": "token", "content": chitchat_response}
+            return
+
         # ── Query enhancement ────────────────────────────────────
         enhanced_query = user_query
         smart_info = None
@@ -460,6 +566,20 @@ class RAGPipeline:
         # The retrieval query: use enhanced if available, else raw
         retrieval_query = enhanced_query
 
+        # ── Metadata filter parsing (rule-based, zero latency) ────
+        parsed_query = None
+        filter_info = None
+        if pinecone_namespace in FILTER_ENABLED_NAMESPACES:
+            parsed_query = self.filter_parser.parse(user_query, pinecone_namespace)
+            if parsed_query.has_filters:
+                filter_info = {
+                    "parsed": repr(parsed_query),
+                    "confidence": parsed_query.confidence,
+                    "matched_rules": parsed_query.matched_rules,
+                    "filter": parsed_query.to_pinecone_filter(),
+                }
+                logger.info("🎯 [stream] Filter parsed: %s", filter_info["parsed"])
+
         if enable_agentic:
             # AGENTIC PATH: autonomous intent routing + retrieval + grounding checks
             agentic_state = AgentState(
@@ -470,6 +590,7 @@ class RAGPipeline:
                 enhanced_query=retrieval_query,
                 top_k=top_k_retrieve,
                 current_query=retrieval_query,
+                filter_stages=parsed_query.relaxed_filters() if parsed_query else [],
             )
             agentic_state = self.agentic_graph.run(agentic_state)
             agentic_info = agentic_state.build_agentic_info()
@@ -493,6 +614,7 @@ class RAGPipeline:
                     "session_id": session_id,
                     "smart_info": smart_info,
                     "agentic_info": agentic_info,
+                    "filter_info": filter_info,
                     "run_id": run_id,
                 }
                 yield {"type": "token", "content": answer}
@@ -517,12 +639,18 @@ class RAGPipeline:
                     "session_id": session_id,
                     "smart_info": smart_info,
                     "agentic_info": agentic_info,
+                    "filter_info": filter_info,
                     "run_id": run_id,
                 }
                 yield {"type": "token", "content": fallback}
                 return
 
-            documents = agentic_state.all_relevant
+            if agentic_state.intent == "DECOMPOSE":
+                documents = []
+                for sq in agentic_state.sub_query_results.values():
+                    documents.extend(sq["all_relevant"])
+            else:
+                documents = agentic_state.all_relevant
         elif enable_smart:
             # SMART PATH: self-correcting retrieval loop
             smart_result = self._smart_retrieve(
@@ -550,17 +678,33 @@ class RAGPipeline:
                     "namespace": namespace, "session_id": session_id,
                     "smart_info": smart_info,
                     "agentic_info": agentic_info,
+                    "filter_info": filter_info,
                     "run_id": _run_id,
                 }
                 yield {"type": "token", "content": fallback}
                 return
         else:
-            # STANDARD PATH: single retrieval (ensemble: dense + BM25 via RRF)
+            # STANDARD PATH: filter-first retrieval when filters available
             t_retrieve = time.perf_counter()
-            documents = self.retriever.ensemble_retrieve(
-                query=retrieval_query, namespace=pinecone_namespace, top_k=top_k_retrieve,
-            )
-            logger.info("⏱ retrieve: %.2fs  (docs=%d)", time.perf_counter() - t_retrieve, len(documents))
+            if parsed_query and parsed_query.has_filters:
+                documents, filter_used, retrieval_quality = self.retriever.filtered_retrieve(
+                    query=retrieval_query,
+                    namespace=pinecone_namespace,
+                    filter_stages=parsed_query.relaxed_filters(),
+                    top_k=top_k_retrieve,
+                )
+                if filter_info:
+                    filter_info["quality"] = retrieval_quality
+                    filter_info["filter_used"] = filter_used
+                logger.info(
+                    "⏱ [stream] filtered_retrieve: %.2fs  (docs=%d, quality=%s)",
+                    time.perf_counter() - t_retrieve, len(documents), retrieval_quality,
+                )
+            else:
+                documents = self.retriever.ensemble_retrieve(
+                    query=retrieval_query, namespace=pinecone_namespace, top_k=top_k_retrieve,
+                )
+                logger.info("⏱ [stream] retrieve: %.2fs  (docs=%d)", time.perf_counter() - t_retrieve, len(documents))
 
         if not documents:
             no_result = (
@@ -582,15 +726,11 @@ class RAGPipeline:
                 "namespace": namespace, "session_id": session_id,
                 "smart_info": smart_info,
                 "agentic_info": agentic_info,
+                "filter_info": filter_info,
                 "run_id": _run_id,
             }
             yield {"type": "token", "content": no_result}
             return
-
-        # ── Use retrieved documents directly (top_k already applied by retriever) ──
-        final_docs = documents[:top_k_retrieve]
-
-        sources = _extract_sources(final_docs)
 
         # ── Capture LangSmith run_id for feedback linkage ────────
         run_id = None
@@ -601,37 +741,98 @@ class RAGPipeline:
         except Exception:
             pass
 
-        # ── Emit metadata first ─────────────────────────────────────
-        yield {
-            "type": "metadata", "sources": sources,
-            "enhanced_query": enhanced_query,
-            "namespace": namespace, "session_id": session_id,
-            "smart_info": smart_info,
-            "agentic_info": agentic_info,
-            "run_id": run_id,
-        }
-
-        # ── Stream tokens ───────────────────────────────────────────
-        full_answer_parts = []
-        for token in self.generator.generate_stream(
-            query=user_query, documents=final_docs, namespace=pinecone_namespace,
-            chat_history=chat_history, session_id=session_id, enhanced_query=enhanced_query,
-        ):
-            full_answer_parts.append(token)
-            yield {"type": "token", "content": token}
-
-        full_answer = "".join(full_answer_parts)
-
-        if enable_agentic and agentic_state is not None:
+        if enable_agentic and agentic_state is not None and agentic_state.intent == "DECOMPOSE":
+            # Emit Metadata
+            all_sources = []
+            for sq in agentic_state.sub_query_results.values():
+                all_sources.extend(_extract_sources(sq["all_relevant"]))
+                
+            yield {
+                "type": "metadata", "sources": all_sources,
+                "enhanced_query": enhanced_query,
+                "namespace": namespace, "session_id": session_id,
+                "smart_info": smart_info,
+                "agentic_info": agentic_info,
+                "filter_info": filter_info,
+                "run_id": run_id,
+            }
+            
+            full_answer_parts = []
+            for i, (sq_id, sq_data) in enumerate(agentic_state.sub_query_results.items()):
+                sq_query = sq_data["final_query"]
+                sq_docs = sq_data["all_relevant"]
+                
+                if i > 0:
+                    sep = "\n\n---\n\n"
+                    yield {"type": "token", "content": sep}
+                    full_answer_parts.append(sep)
+                    
+                q_header = f"**{sq_query}**\n\n"
+                yield {"type": "token", "content": q_header}
+                full_answer_parts.append(q_header)
+                
+                if not sq_docs:
+                    s_msg = "Sorry, insufficient data available to answer this part."
+                    yield {"type": "token", "content": s_msg}
+                    full_answer_parts.append(s_msg)
+                    continue
+                    
+                local_ans_parts = []
+                for token in self.generator.generate_stream(
+                    query=sq_query, documents=sq_docs, namespace=pinecone_namespace,
+                    chat_history=chat_history, session_id=session_id, enhanced_query=sq_query,
+                ):
+                    local_ans_parts.append(token)
+                    full_answer_parts.append(token)
+                    yield {"type": "token", "content": token}
+                    
+                merged_local_ans = "".join(local_ans_parts)
+                is_grnd, score, claims = self.agentic_graph.hallucination_guard.check(merged_local_ans, sq_docs)
+                if not is_grnd and score < 0.4:
+                    discl = "\n\n⚠️ *Note: Some details may not be directly verified from available documents.*"
+                    full_answer_parts.append(discl)
+                    yield {"type": "token", "content": discl}
+                    
+            full_answer = "".join(full_answer_parts)
             agentic_state.answer = full_answer
-            agentic_state.sources = sources
-            agentic_state = self.agentic_graph.post_generation_check(agentic_state)
-            updated_answer = agentic_state.answer
+            agentic_state.sources = all_sources
+            # Rebuild info after mutating answer
             agentic_info = agentic_state.build_agentic_info()
-            if updated_answer.startswith(full_answer) and len(updated_answer) > len(full_answer):
-                # Stream only the additional disclaimer text if grounding guard appended one.
-                yield {"type": "token", "content": updated_answer[len(full_answer):]}
-            full_answer = updated_answer
+            
+        else:
+            # ── Standard Single-Generation Path ──
+            final_docs = documents[:top_k_retrieve]
+            sources = _extract_sources(final_docs)
+            
+            yield {
+                "type": "metadata", "sources": sources,
+                "enhanced_query": enhanced_query,
+                "namespace": namespace, "session_id": session_id,
+                "smart_info": smart_info,
+                "agentic_info": agentic_info,
+                "filter_info": filter_info,
+                "run_id": run_id,
+            }
+                
+            full_answer_parts = []
+            for token in self.generator.generate_stream(
+                query=user_query, documents=final_docs, namespace=pinecone_namespace,
+                chat_history=chat_history, session_id=session_id, enhanced_query=enhanced_query,
+            ):
+                full_answer_parts.append(token)
+                yield {"type": "token", "content": token}
+                
+            full_answer = "".join(full_answer_parts)
+            
+            if enable_agentic and agentic_state is not None:
+                agentic_state.answer = full_answer
+                agentic_state.sources = sources
+                agentic_state = self.agentic_graph.post_generation_check(agentic_state)
+                updated_answer = agentic_state.answer
+                agentic_info = agentic_state.build_agentic_info()
+                if updated_answer.startswith(full_answer) and len(updated_answer) > len(full_answer):
+                    yield {"type": "token", "content": updated_answer[len(full_answer):]}
+                full_answer = updated_answer
 
         if session_id:
             self.memory.add_turn(session_id, user_query, full_answer)

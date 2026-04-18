@@ -23,10 +23,11 @@ class AgentState:
     chat_history: List[Dict[str, str]] = field(default_factory=list)
     enhanced_query: str = ""
     top_k: int = 5
+    filter_stages: List[Dict] = field(default_factory=list)
 
     # ── Agent decisions ──────────────────────────────────────────────
     intent: str = ""                          # DIRECT / RETRIEVE / DECOMPOSE / CLARIFY
-    sub_queries: List[str] = field(default_factory=list)
+    sub_queries: List[Dict[str, str]] = field(default_factory=list)
 
     # ── Retrieval state ──────────────────────────────────────────────
     current_query: str = ""
@@ -35,6 +36,10 @@ class AgentState:
     all_irrelevant: List[Dict] = field(default_factory=list)
     seen_ids: Set[str] = field(default_factory=set)
     attempt: int = 0
+
+    # ── Per-Sub-Query Execution state ────────────────────────────────
+    # Isolated state bounds for decomposed pathways (Q1, Q2, etc.)
+    sub_query_results: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
     # ── Generation state ─────────────────────────────────────────────
     answer: str = ""

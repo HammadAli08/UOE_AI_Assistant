@@ -48,12 +48,7 @@ function CTABanner() {
           </p>
           <button
             onClick={() => navigate('/chat')}
-            className="group relative inline-flex items-center gap-3 px-10 py-4 rounded-full
-                       bg-mustard-500 text-navy-950 font-semibold text-sm uppercase tracking-[0.18em]
-                       transition-[transform,box-shadow] duration-300 ease-out
-                       hover:scale-105 hover:shadow-[0_8px_30px_rgba(200,185,74,0.3)]
-                       active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-mustard-400"
-            style={{ willChange: 'transform' }}
+            className="btn-primary group"
           >
             <span>Start a Conversation</span>
             <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />

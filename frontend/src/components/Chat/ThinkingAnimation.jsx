@@ -1,38 +1,35 @@
 // ──────────────────────────────────────────
-// ThinkingAnimation — simple, smooth pre-answer loader
+// ThinkingAnimation — minimal three-dot bounce (iMessage/ChatGPT style)
 // ──────────────────────────────────────────
 import { memo } from 'react';
 import { motion } from 'framer-motion';
 
 function ThinkingAnimation() {
-    return (
-        <motion.div
-            className="flex gap-2 sm:gap-3 px-2 sm:px-6 py-3"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-        >
-            {/* Avatar */}
-            <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden border border-mustard-500/20 mt-0.5">
-                <img src="/unnamed.jpg" alt="UOE" className="w-full h-full object-cover" />
-            </div>
+  return (
+    <motion.div
+      className="flex items-center gap-2 px-2 sm:px-6 py-3"
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
+    >
+      {/* Avatar — matches assistant message style */}
+      <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+        <img src="/unnamed.jpg" alt="UOE" className="w-full h-full object-cover" />
+      </div>
 
-            {/* Processing Bubble */}
-            <div className="thinking-bubble">
-                <div className="flex items-center gap-3">
-                    <div className="flex gap-1.5">
-                        <span className="processing-dot" />
-                        <span className="processing-dot processing-dot--delay" />
-                        <span className="processing-dot processing-dot--delay2" />
-                    </div>
-                    <span className="thinking-label text-cream/85">
-                        Processing
-                    </span>
-                </div>
-            </div>
-        </motion.div>
-    );
+      {/* Three dots */}
+      <div className="flex items-center gap-1 pl-2">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="think-dot"
+            style={{ animationDelay: `${i * 0.16}s` }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
 }
 
 export default memo(ThinkingAnimation);

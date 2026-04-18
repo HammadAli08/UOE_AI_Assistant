@@ -48,12 +48,13 @@ class QueryDecomposer:
         return self._prompt_template
 
     @traceable(name="agentic_rag.decompose_query", run_type="chain")
-    def decompose(self, query: str) -> List[str]:
+    def decompose(self, query: str) -> List[dict]:
         """
         Decompose a complex query into independent sub-queries.
 
-        Returns a list of sub-query strings, or [original_query] on failure.
+        Returns a list of sub-query dicts with id, type and query.
         """
+        fallback_query = [{"id": "Q1", "query": query, "type": "FACTUAL"}]
         try:
             prompt = self.prompt_template.format(
                 query=query,
@@ -65,10 +66,11 @@ class QueryDecomposer:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=AGENTIC_RAG_CONFIG["decomposer_temperature"],
                 max_tokens=AGENTIC_RAG_CONFIG["decomposer_max_tokens"],
+                response_format={"type": "json_object"}
             )
             raw = resp.choices[0].message.content.strip()
 
-            # Parse JSON array
+            # Parse JSON object containing 'sub_queries'
             sub_queries = self._parse_sub_queries(raw)
 
             if sub_queries and len(sub_queries) > 1:
@@ -79,47 +81,31 @@ class QueryDecomposer:
                 return sub_queries[:self.max_sub_queries]
 
             # If decomposition produced ≤1 query, just use original
-            logger.info("Decomposition produced single query — using original")
-            return [query]
+            logger.info("Decomposition produced single query — using original fallback")
+            return fallback_query
 
         except Exception as exc:
-            logger.warning("Query decomposition failed: %s — using original query", exc)
-            return [query]
+            logger.warning("Query decomposition failed: %s — using original fallback query", exc)
+            return fallback_query
 
     @staticmethod
-    def _parse_sub_queries(raw: str) -> List[str]:
-        """Parse the LLM's JSON array response."""
+    def _parse_sub_queries(raw: str) -> List[dict]:
+        """Parse the LLM's JSON object response."""
         cleaned = raw.strip()
         if cleaned.startswith("```"):
             cleaned = cleaned.split("\n", 1)[-1]
-        if cleaned.endswith("```"):
-            cleaned = cleaned.rsplit("```", 1)[0]
-        cleaned = cleaned.strip()
+        cleaned = cleaned.replace("```json", "").replace("```", "").strip()
 
         try:
             result = json.loads(cleaned)
-            if isinstance(result, list):
-                queries: List[str] = []
-                for item in result:
-                    if isinstance(item, dict):
-                        # Extract 'query' key as per prompt instructions
-                        q = item.get("query", "")
-                    else:
-                        q = str(item)
-                    
-                    if q.strip():
-                        queries.append(q.strip())
-                return queries
+            if isinstance(result, dict) and "sub_queries" in result:
+                sub_queries = result["sub_queries"]
+                if isinstance(sub_queries, list):
+                    return [q for q in sub_queries if isinstance(q, dict) and "query" in q and "id" in q]
         except (json.JSONDecodeError, ValueError):
             pass
 
-        # Fallback: try splitting by newlines and stripping common bullet points
-        lines = []
-        for l in raw.split("\n"):
-            line = l.strip().lstrip("- •0123456789.")
-            if line.strip() and len(line.strip()) > 5:
-                lines.append(line.strip())
-        return lines
+        return []
 
 
 # ── Singleton ────────────────────────────────────────────────────────

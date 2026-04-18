@@ -101,17 +101,7 @@ class AgenticRAGGraph:
         state.intent = self.intent_classifier.classify(
             state.user_query, state.chat_history,
         )
-
-        # Capture suggested namespace (intelligent switching)
-        suggested_ns = self.intent_classifier.get_suggested_namespace()
-        if suggested_ns and suggested_ns != state.namespace:
-            old_ns = state.namespace
-            state.namespace = suggested_ns
-            logger.info("Agentic Namespace Switch: %s → %s", old_ns, suggested_ns)
-            state.log_step("namespace_switch", from_ns=old_ns, to_ns=suggested_ns)
-        
-        self.intent_classifier.clear_suggestions()
-        state.log_step("classify_intent", intent=state.intent, final_namespace=state.namespace)
+        state.log_step("classify_intent", intent=state.intent)
 
     def _node_direct_answer(self, state: AgentState) -> None:
         """Node: Answer directly without retrieval (greetings, meta questions)."""
@@ -199,19 +189,38 @@ class AgenticRAGGraph:
     def _node_retrieve(self, state: AgentState, query: str, attempt: int) -> List[Dict]:
         """Node: Retrieve documents for a single query."""
         retrieve_k = state.top_k + (self.retry_boost * attempt)
-        documents = self.retriever.ensemble_retrieve(
-            query=query,
-            namespace=state.namespace,
-            top_k=retrieve_k,
-        )
+        
+        if state.filter_stages:
+            documents, filter_used, quality = self.retriever.filtered_retrieve(
+                query=query,
+                namespace=state.namespace,
+                filter_stages=state.filter_stages,
+                top_k=retrieve_k,
+            )
+            state.log_step(
+                "filtered_retrieve",
+                query=query[:80],
+                attempt=attempt,
+                docs_found=len(documents),
+                top_k=retrieve_k,
+                quality=quality,
+                filter_used=filter_used,
+            )
+        else:
+            documents = self.retriever.ensemble_retrieve(
+                query=query,
+                namespace=state.namespace,
+                top_k=retrieve_k,
+            )
+            state.log_step(
+                "retrieve",
+                query=query[:80],
+                attempt=attempt,
+                docs_found=len(documents),
+                top_k=retrieve_k,
+            )
+            
         state.total_retrievals += 1
-        state.log_step(
-            "retrieve",
-            query=query[:80],
-            attempt=attempt,
-            docs_found=len(documents),
-            top_k=retrieve_k,
-        )
         return documents
 
     def _node_grade(
@@ -227,19 +236,19 @@ class AgenticRAGGraph:
         )
         return relevant, irrelevant
 
-    def _node_rewrite(self, state: AgentState) -> str:
+    def _node_rewrite(self, state: AgentState, current_query: str, irrelevant_docs: List[Dict], attempt: int) -> str:
         """Node: Rewrite the query for retry."""
         rewritten = self.rewriter.rewrite(
-            state.user_query, state.all_irrelevant, state.attempt,
+            current_query, irrelevant_docs, attempt,
         )
         state.query_rewrites.append({
-            "attempt": state.attempt,
+            "attempt": attempt,
             "rewritten_query": rewritten,
         })
         state.log_step(
             "rewrite",
-            attempt=state.attempt,
-            original=state.user_query[:60],
+            attempt=attempt,
+            original=current_query[:60],
             rewritten=rewritten[:80],
         )
         return rewritten
@@ -272,13 +281,13 @@ class AgenticRAGGraph:
         current_query = query
 
         for attempt in range(self.max_retries + 1):
-            state.attempt = attempt
+            state.attempt = attempt  # Kept for standard standard path
 
             # Retrieve
             documents = self._node_retrieve(state, current_query, attempt)
             if not documents:
                 if attempt < self.max_retries:
-                    current_query = self._node_rewrite(state)
+                    current_query = self._node_rewrite(state, state.user_query, state.all_irrelevant, attempt)
                     continue
                 break
 
@@ -331,13 +340,73 @@ class AgenticRAGGraph:
                     relevant=len(relevant),
                     attempt=attempt,
                 )
-                current_query = self._node_rewrite(state)
+                current_query = self._node_rewrite(state, state.user_query, state.all_irrelevant, attempt)
             else:
                 state.log_step(
                     "quality_gate",
                     decision="exhausted",
                     total_relevant=len(state.all_relevant),
                 )
+
+    def _isolated_retrieval_loop(self, state: AgentState, sub_query_id: str, query: str) -> None:
+        """
+        Isolated self-correcting retrieval loop for a sub-query.
+        Stores results strictly within state.sub_query_results.
+        """
+        current_query = query
+        all_relevant = []
+        all_irrelevant = []
+        seen_ids = set()
+
+        for attempt in range(self.max_retries + 1):
+            documents = self._node_retrieve(state, current_query, attempt)
+            if not documents:
+                if attempt < self.max_retries:
+                    current_query = self._node_rewrite(state, query, all_irrelevant, attempt)
+                    continue
+                break
+
+            relevant, irrelevant = self._node_grade(state, documents)
+
+            for chunk in relevant:
+                chunk_id = chunk.get("id", id(chunk))
+                if chunk_id not in seen_ids:
+                    seen_ids.add(chunk_id)
+                    all_relevant.append(chunk)
+            all_irrelevant.extend(irrelevant)
+
+            if len(relevant) >= self.min_relevant:
+                avg_conf = sum(c.get("grade_confidence", 0.0) for c in relevant) / max(len(relevant), 1)
+                if avg_conf >= self.quality_threshold:
+                    state.log_step(f"quality_gate_{sub_query_id}", decision="pass", relevant=len(relevant))
+                    break
+
+            if len(all_relevant) >= self.early_success:
+                avg_conf = sum(c.get("grade_confidence", 0.0) for c in all_relevant) / max(len(all_relevant), 1)
+                if avg_conf >= self.quality_threshold:
+                    state.log_step(f"quality_gate_{sub_query_id}", decision="early_exit", total_relevant=len(all_relevant))
+                    break
+
+            if attempt < self.max_retries:
+                state.log_step(f"quality_gate_{sub_query_id}", decision="retry", attempt=attempt)
+                current_query = self._node_rewrite(state, query, all_irrelevant, attempt)
+            else:
+                state.log_step(f"quality_gate_{sub_query_id}", decision="exhausted", total_relevant=len(all_relevant))
+
+        # Store isolated state
+        best_effort = len(all_relevant) < self.min_relevant
+        # Sort relevant chunks for this isolated query
+        all_relevant.sort(key=lambda c: c.get("grade_confidence", 0.0), reverse=True)
+        # Force limit the isolated chunk window to max top_k docs so it doesn't leak memory and scales
+        state.sub_query_results[sub_query_id] = {
+            "all_relevant": all_relevant[: state.top_k],
+            "all_irrelevant": all_irrelevant,
+            "final_query": current_query,
+            "best_effort": best_effort,
+            "is_grounded": True,
+            "grounding_score": 1.0,
+            "answer": ""
+        }
 
     # ═══════════════════════════════════════════════════════════════════
     # MAIN GRAPH EXECUTION
@@ -365,15 +434,33 @@ class AgenticRAGGraph:
             return state
 
         if state.intent == INTENT_DECOMPOSE:
-            # Decompose into sub-queries, retrieve each independently
+            # Decompose into sub-queries structured elements
             self._node_decompose(state)
 
-            for sub_query in state.sub_queries:
-                # Enhance each sub-query
-                enhanced = self.query_enhancer.enhance(
-                    sub_query, state.chat_history,
-                )
-                self._retrieval_loop(state, enhanced)
+            import concurrent.futures
+
+            def process_sub_query(sq_dict: Dict[str, str]) -> None:
+                sq_id = sq_dict.get("id")
+                sq_query = sq_dict.get("query")
+                if not sq_id or not sq_query:
+                    return
+                enhanced = self.query_enhancer.enhance(sq_query, state.chat_history)
+                self._isolated_retrieval_loop(state, sq_id, enhanced)
+
+            # Launch parallel threads 
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(state.sub_queries) or 1) as executor:
+                executor.map(process_sub_query, state.sub_queries)
+            
+            # Sub-queries isolated evaluation completed here. Pipeline handles generation natively.
+            state.log_step("decompose_retrieval_completed", results_keys=list(state.sub_query_results.keys()))
+
+            # Check if all isolated loops failed
+            total_relevant_across_all = sum(len(r["all_relevant"]) for r in state.sub_query_results.values())
+            if not total_relevant_across_all:
+                state.used_fallback = True
+                state.clarification = NO_RESULTS_MESSAGE
+            
+            return state
 
         else:
             # INTENT_RETRIEVE: standard single-query retrieval

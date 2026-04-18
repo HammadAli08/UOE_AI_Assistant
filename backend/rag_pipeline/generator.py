@@ -44,11 +44,14 @@ class Generator:
         prompt_path = SYSTEM_PROMPTS_DIR / prompt_file
         if prompt_path.exists():
             prompt = prompt_path.read_text().strip()
+            prompt += "\n\nIMPORTANT: If the user communicates in Roman Urdu, you MUST respond in Roman Urdu. NEVER use exact Urdu (Nastaliq/Arabic script) in your response, always use Roman Urdu (Latin script)."
             self._prompt_cache[namespace] = prompt
             return prompt
         default_prompt = (
             "You are an academic assistant. Answer based on retrieved documents only. "
-            "Do NOT add inline source lists or generic labels like 'Document 1'; the UI shows sources."
+            "Do NOT add inline source lists or generic labels like 'Document 1'; the UI shows sources.\n\n"
+            "IMPORTANT: If the user communicates in Roman Urdu, you MUST respond in Roman Urdu. "
+            "NEVER use exact Urdu (Nastaliq/Arabic script) in your response, always use Roman Urdu (Latin script)."
         )
         self._prompt_cache[namespace] = default_prompt
         return default_prompt
@@ -62,7 +65,79 @@ class Generator:
             source = metadata.get("source_file", "Unknown")
             page = metadata.get("page_number", "N/A")
             text = doc.get("text", "")
-            context_parts.append(f"[Document {i}]\nSource: {source}, Page: {page}\nContent: {text}")
+
+            # Build rich metadata header for LLM grounding
+            meta_lines = [f"[Document {i}]"]
+            meta_lines.append(f"Source: {source}, Page: {page}")
+
+            # Include canonical metadata when available
+            # ── BS/ADP fields ──
+            program = metadata.get("program_name")
+            degree = metadata.get("degree_type")
+            chunk_type = metadata.get("chunk_type")
+            semester = metadata.get("semester")
+            course_code = metadata.get("course_code")
+            course_title = metadata.get("course_title")
+            department = metadata.get("department")
+
+            # ── Rules & Regulations fields ──
+            doc_type = metadata.get("doc_type")
+            topic_cluster = metadata.get("topic_cluster")
+            reg_scope = metadata.get("regulations_scope")
+            eff_year = metadata.get("effective_year")
+            authority = metadata.get("authority")
+
+            # ── About University fields ──
+            campus_name = metadata.get("campus_name")
+            person_name = metadata.get("person_name")
+            person_title = metadata.get("person_title")
+            facility_type = metadata.get("facility_type")
+            shift = metadata.get("shift")
+            prog_from_about = metadata.get("program")
+
+            meta_fields = []
+            if program:
+                meta_fields.append(f"program={program}")
+            if degree:
+                meta_fields.append(f"degree={degree}")
+            if department:
+                meta_fields.append(f"department={department}")
+            if chunk_type:
+                meta_fields.append(f"type={chunk_type}")
+            if semester:
+                meta_fields.append(f"semester={semester}")
+            if course_code:
+                meta_fields.append(f"course_code={course_code}")
+            if course_title:
+                meta_fields.append(f"course_title={course_title}")
+            if doc_type:
+                meta_fields.append(f"doc_type={doc_type}")
+            if topic_cluster:
+                meta_fields.append(f"topic={topic_cluster}")
+            if reg_scope:
+                meta_fields.append(f"applies_to={reg_scope}")
+            if eff_year:
+                meta_fields.append(f"year={eff_year}")
+            if authority:
+                meta_fields.append(f"authority={authority}")
+            if campus_name:
+                meta_fields.append(f"campus={campus_name}")
+            if person_name:
+                meta_fields.append(f"person={person_name}")
+            if person_title:
+                meta_fields.append(f"title={person_title}")
+            if facility_type:
+                meta_fields.append(f"facility={facility_type}")
+            if shift:
+                meta_fields.append(f"shift={shift}")
+            if prog_from_about and not program:
+                meta_fields.append(f"program={prog_from_about}")
+
+            if meta_fields:
+                meta_lines.append("Metadata: " + " | ".join(meta_fields))
+
+            meta_lines.append(f"Content: {text}")
+            context_parts.append("\n".join(meta_lines))
         return "\n\n---\n\n".join(context_parts)
 
     def _build_messages(

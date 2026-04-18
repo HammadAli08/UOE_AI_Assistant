@@ -5,24 +5,12 @@ Break the complex query into simple, self-contained sub-queries that can each be
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- Each sub-query must be a complete standalone question (under 25 words).
+- Each sub-query must be a complete standalone atomic question.
+- No pronouns. Replace "it", "they", "this" with the explicit context (e.g., "BS Computer Science").
 - Maximum {max_sub_queries} sub-queries.
-- Each sub-query must target a DIFFERENT piece of information.
+- No overlapping logic. Each query must target a completely distinct fact or question.
 - Preserve all academic terms exactly: course codes, program names, semester numbers.
 - Do NOT add information the user did not mention.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NAMESPACE ASSIGNMENT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Assign each sub-query the correct namespace using these rules (check in order):
-1. Fee amount / shift / cost / charges           → about-university
-2. Contact / email / phone / address / principal → about-university
-3. Faculty / professor / HEC supervisor          → about-university
-4. Campus overview / departments / facilities    → about-university
-5. MS / MPhil / PhD / postgraduate / thesis      → ms-phd-schemes
-6. Attendance / CGPA formula / probation /
-   fee refund / migration rule                   → rules-regulations
-7. Default                                       → bs-adp-schemes
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ORIGINAL QUERY
@@ -30,11 +18,21 @@ ORIGINAL QUERY
 {query}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTPUT
+OUTPUT SCHEMA
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Respond with ONLY a valid JSON array of objects. No explanation, no markdown.
+Respond with ONLY a valid JSON object matching the exact structure below. Do not use markdown wrappers, no explanations.
 
-[
-  {{"query": "What are the admission requirements for BS Computer Science?", "namespace": "bs-adp-schemes"}},
-  {{"query": "What is the fee for BS Computer Science?", "namespace": "about-university"}}
-]
+{
+  "sub_queries": [
+    {
+      "id": "Q1",
+      "query": "What is the fee structure for BS Computer Science?",
+      "type": "FACTUAL"
+    },
+    {
+      "id": "Q2",
+      "query": "What are the eligibility criteria for BS Computer Science?",
+      "type": "FACTUAL"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Optional, List, Dict
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -271,6 +271,62 @@ async def submit_feedback(request: FeedbackRequest):
         raise HTTPException(status_code=500, detail="Failed to submit feedback")
 
 
+
+
+@app.post("/api/transcribe")
+async def transcribe_audio(audio: UploadFile = File(...)):
+    """Transcribe voice input with heuristic safety and semantic norm."""
+    try:
+        import io
+        from openai import OpenAI
+        from rag_pipeline.agentic_rag.voice_transliterator import VoiceTransliterator
+        from rag_pipeline.agentic_rag.voice_normalizer import VoiceNormalizer
+        from rag_pipeline.config import OPENAI_API_KEY
+
+        # 1. Read and validate size
+        # Hard limits (e.g. 5MB) since max length is 15s
+        audio_content = await audio.read()
+        if len(audio_content) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Audio file too large (max 5MB)")
+        
+        if not audio_content:
+            raise HTTPException(status_code=400, detail="Empty audio file")
+            
+        file_obj = io.BytesIO(audio_content)
+        # OpenAI requires a filename to infer extension
+        file_obj.name = audio.filename or "audio.webm"
+        
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        
+        # 2. Whisper-1 generation (as standard high-speed STT endpoint)
+        t_start = datetime.now()
+        response = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=file_obj,
+        )
+        t_end = datetime.now()
+        
+        raw_text = response.text
+        latency = (t_end - t_start).total_seconds()
+        logger.info(f"🎤 [transcribe] latency={latency:.2f}s, raw='{raw_text[:50]}...'")
+        
+        # 2.5 Transliteration (Urdu -> Roman Urdu)
+        transliterator = VoiceTransliterator()
+        transliterated_text = transliterator.transliterate(raw_text)
+        
+        # 3. Normalizer (Heuristic Gate + LLM Rewrite + Semantic Drift Check)
+        normalizer = VoiceNormalizer()
+        normalized_text = normalizer.normalize_query(transliterated_text)
+        
+        return {
+            "text": normalized_text,
+            "raw": raw_text,
+            "transcription_latency": latency
+        }
+        
+    except Exception as e:
+        logger.error(f"Transcription error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 
 if __name__ == "__main__":

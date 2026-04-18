@@ -1,6 +1,6 @@
 // ──────────────────────────────────────────
-// StreamingBubble — displays content as it streams in (dark futurism theme)
-// ─────────────────────────────────────────-
+// StreamingBubble — flat assistant message during streaming
+// ──────────────────────────────────────────
 import { memo, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -56,39 +56,25 @@ function StreamingBubble({ content }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.3 }}
-      className="flex gap-3 px-4 sm:px-6 py-4"
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      className="px-2 sm:px-6 py-3"
     >
-      <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden
-                      border border-mustard-500/20 mt-0.5 shadow-glow-sm">
-        <img src="/unnamed.jpg" alt="UOE" className="w-full h-full object-cover" />
-      </div>
-      <motion.div
-        animate={{
-          boxShadow: [
-            '0 0 0 0 rgba(200, 185, 74, 0)',
-            '0 0 8px 1px rgba(200, 185, 74, 0.15)',
-            '0 0 0 0 rgba(200, 185, 74, 0)',
-          ],
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        className="max-w-[85%] sm:max-w-[75%] lg:max-w-[65%]
-                   bg-white/[0.025] border border-white/[0.06]
-                   border-l-[3px] border-l-mustard-500/30
-                   rounded-2xl rounded-bl-md px-5 py-3.5 min-h-[64px]"
-      >
-        <div className="message-content text-sm text-cream/85 streaming-cursor mask-sweep-reveal">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {displayed || content}
-          </ReactMarkdown>
+      {/* Avatar + label row — matches MessageBubble */}
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+          <img src="/unnamed.jpg" alt="UOE" className="w-full h-full object-cover" />
         </div>
-      </motion.div>
+        <span className="text-xs font-medium text-mist">UOE AI</span>
+      </div>
+
+      {/* Content — flat, unboxed, with cursor */}
+      <div className="message-content text-[0.9375rem] leading-[1.7] text-cream/90 pl-8 streaming-cursor">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {displayed || content}
+        </ReactMarkdown>
+      </div>
     </motion.div>
   );
 }

@@ -161,35 +161,30 @@ function ChatContainer({ onSuggestionClick }) {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col relative">
+    <div className="flex-1 min-h-0 flex flex-col relative w-full">
       {/* Scrollable message area */}
-      <div id="messages" className="flex-1 overflow-y-auto overscroll-contain touch-pan-y px-2 sm:px-4 pb-36 md:pb-6 pt-4 space-y-3 overflow-anchor-none">
-        <div className="max-w-4xl mx-auto">
+      <div id="messages" className="flex-1 overflow-y-auto overscroll-contain touch-pan-y overflow-anchor-none w-full pb-24 md:pb-6">
+        <div className="max-w-[900px] mx-auto w-full px-3 sm:px-6 lg:px-8 pt-4 flex flex-col gap-5">
           <AnimatePresence mode="popLayout">
             {messages.map((msg) => (
               <motion.div
                 key={msg.id}
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{
-                  type: 'spring',
-                  stiffness: 80,
-                  damping: 18,
-                }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
               >
                 <MessageBubble message={msg} />
               </motion.div>
             ))}
           </AnimatePresence>
 
-          {/* Streaming content with fade-in + slide-up */}
+          {/* Streaming content */}
           {isStreaming && streamingContent && (
             <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="streaming-glow"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               <StreamingBubble content={streamingContent} />
             </motion.div>
@@ -202,7 +197,7 @@ function ChatContainer({ onSuggestionClick }) {
             )}
           </AnimatePresence>
 
-          <div ref={bottomRef} />
+          <div ref={bottomRef} className="h-4" />
         </div>
       </div>
 
@@ -210,11 +205,12 @@ function ChatContainer({ onSuggestionClick }) {
       {showJumpToLatest && (
         <button
           onClick={() => scrollToBottom(true)}
-          className="absolute right-4 sm:right-6 bottom-20 sm:bottom-16 px-3 py-2 rounded-full text-xs font-semibold
-                     bg-mustard-600 text-navy-950 shadow-lg shadow-mustard-900/40 hover:bg-mustard-500
-                     transition-colors duration-200"
+          className="absolute right-4 sm:right-6 bottom-20 sm:bottom-16 px-3 py-1.5 rounded-full text-xs font-medium
+                     bg-surface-2 border border-surface-border text-ash
+                     hover:border-surface-border-hover hover:text-textWhite
+                     shadow-lg shadow-black/30 transition-colors duration-200 z-40"
         >
-          Jump to latest
+          ↓ Latest
         </button>
       )}
 
@@ -229,9 +225,6 @@ function ChatContainer({ onSuggestionClick }) {
           </div>
         </div>
       )}
-
-      {/* Bottom gradient fade — overlay, doesn't affect layout */}
-      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-navy-950 to-transparent pointer-events-none z-10" />
     </div>
   );
 }

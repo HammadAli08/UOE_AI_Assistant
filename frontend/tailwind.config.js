@@ -85,11 +85,22 @@ export default {
         cream: '#E8E4DC',
         ash:   '#8B95A8',
         mist:  '#556074',
+        // ── Premium surface depth system ──
+        surface: {
+          base:  '#0C1017',
+          1:     '#141921',
+          2:     '#1A2029',
+          3:     '#212833',
+          border: '#2D3340',
+          'border-hover': '#3D4A5C',
+        },
+        textWhite: '#E2E5EA',
+        gold: '#B8AA45',
       },
       /* ── Typography ── */
       fontFamily: {
-        display: ['Oswald', 'Impact', 'Arial Narrow', 'sans-serif'],
-        body:    ['Merriweather', 'Georgia', 'Cambria', 'serif'],
+        display: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
+        body:    ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono:    ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       fontSize: {

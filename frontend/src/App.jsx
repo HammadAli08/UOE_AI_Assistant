@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────
 import { useCallback, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import { Menu, LogIn, User } from 'lucide-react';
+import { Menu, LogIn, User, Database } from 'lucide-react';
 import useChatStore from '@/store/useChatStore';
 import useAuthStore from '@/store/useAuthStore';
 import useChat from '@/hooks/useChat';
@@ -17,6 +17,7 @@ import ChatSidebar from '@/components/Chat/ChatSidebar';
 // Lazy-load heavy routes — they won't be in the initial bundle
 const HeroPage  = lazy(() => import('@/components/Landing/HeroPage'));
 const AuthModal = lazy(() => import('@/components/Auth/AuthModal'));
+const KnowledgeBaseExplorer = lazy(() => import('@/components/KnowledgeBaseExplorer/KnowledgeBaseExplorer'));
 
 /* ── Minimal spinner shown during lazy chunk load ── */
 function PageLoader() {
@@ -47,21 +48,7 @@ function ChatPage() {
 
       {/* ── Main chat area ── */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
-        {/* ── Ambient gradient blobs for depth ── */}
-        <div
-          className="absolute top-0 right-0 w-[600px] h-[500px] rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(200,185,74,0.045) 0%, transparent 70%)',
-            filter: 'blur(100px)',
-          }}
-        />
-        <div
-          className="absolute bottom-0 left-0 w-[500px] h-[400px] rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(100,120,200,0.035) 0%, transparent 70%)',
-            filter: 'blur(100px)',
-          }}
-        />
+        {/* Clean background — no ambient blobs */}
 
         {/* ── Top bar ── */}
         <header className="flex items-center justify-between px-4 sm:px-8 h-14 border-b border-white/[0.06] flex-shrink-0">
@@ -91,6 +78,16 @@ function ChatPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/knowledge-bases')}
+              className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.02]
+                         text-xs font-medium text-ash hover:text-cream hover:border-mustard-500/30
+                         transition-all duration-400 active:scale-[0.97]"
+            >
+              <Database className="w-3.5 h-3.5 text-mustard-500/70" />
+              Explorer
+            </button>
+
             <button
               onClick={() => useChatStore.getState().newChat()}
               className="px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.02]
@@ -155,6 +152,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HeroPage />} />
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/knowledge-bases" element={<KnowledgeBaseExplorer />} />
       </Routes>
     </Suspense>
   );

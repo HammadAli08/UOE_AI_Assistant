@@ -209,6 +209,10 @@ class IntentClassifier:
                         "Intent classified via JSON: '%s' → %s (Suggested NS: %s)",
                         query[:60], found_intent, suggested_ns,
                     )
+                    
+                    if found_intent == INTENT_DECOMPOSE:
+                        found_intent = self._enforce_decomposition_guard(query, found_intent)
+                        
                     self._suggested_namespace = suggested_ns
                     return found_intent
 
@@ -220,6 +224,8 @@ class IntentClassifier:
             for intent in VALID_INTENTS:
                 if intent in raw_upper:
                     logger.info("Intent classified via text fallback: %s", intent)
+                    if intent == INTENT_DECOMPOSE:
+                        intent = self._enforce_decomposition_guard(query, intent)
                     return intent
 
             logger.warning(
@@ -248,6 +254,19 @@ class IntentClassifier:
         """Clear stored fast response after use."""
         if hasattr(self, '_fast_response'):
             self._fast_response = None
+
+    def _enforce_decomposition_guard(self, query: str, current_intent: str) -> str:
+        """
+        Guard against the LLM over-triggering DECOMPOSE for short/voice queries 
+        that lack fundamental conjunctions indicating multi-intent structure.
+        """
+        words = [w.strip() for w in query.lower().split()]
+        conjunctions = sum(1 for w in words if w in ['and', 'or', 'aur', 'also', 'furthermore', 'plus'])
+        
+        if conjunctions < 1 and len(words) < 15:
+            logger.info("🛡️ Decomposition blocked: 0 conjunctions in <15 words. Downgrading to RETRIEVE.")
+            return INTENT_RETRIEVE
+        return current_intent
 
 
 # ── Singleton ────────────────────────────────────────────────────────

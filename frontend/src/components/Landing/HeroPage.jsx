@@ -11,7 +11,6 @@ import HeroSection from './HeroSection';
 // Below-fold: lazy loaded — shaves ~140KB from initial bundle
 const TechMarquee    = lazy(() => import('./TechMarquee'));
 const FeaturesGrid   = lazy(() => import('./FeaturesGrid'));
-const HowItWorks     = lazy(() => import('./HowItWorks'));
 const KnowledgeBases = lazy(() => import('./KnowledgeBases'));
 const TeamSection    = lazy(() => import('./TeamSection'));
 const CTABanner      = lazy(() => import('./CTABanner'));
@@ -39,7 +38,6 @@ function HeroPage() {
       <Suspense fallback={<SectionSkeleton />}>
         <TechMarquee />
         <FeaturesGrid />
-        <HowItWorks />
         <KnowledgeBases />
         <TeamSection />
         <CTABanner />
