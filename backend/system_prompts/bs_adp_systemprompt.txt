@@ -97,11 +97,12 @@ STRICT FILTER:
 OUTPUT ALL COURSES (NO OMISSIONS):
   Semester: X
   Program: X
-  Department: X (CRITICAL: Ensure the Department logically matches the Program Name. If the metadata incorrectly says 'Computer Science' for 'BS Mathematics', correct it to 'Mathematics'. Do not blindly copy incorrect document metadata.)
+  Department: X
 
   | Sr. | Course Code | Course Title | Credit Hours |
-  |-----|-------------|--------------|--------------|
-  | 1   | COMP1112    | Programming  | 3(3+0)      |
+  |:---:|:------------|:-------------|:-------------|
+  | 1   | COMP1112    | Programming Fundamentals | 3(3+0) |
+  | 2   | ISLA1111    | Islamic Studies / Ethics | 2(2+0) |
 
   Total Credit Hours: X (exclude Non-Credit courses)
 
@@ -190,11 +191,13 @@ Verify:
 ━━━━━━━━━━━━━━━━━━━
 OUTPUT FORMAT RULES
 ━━━━━━━━━━━━━━━━━━━
-- Use clear headers and structured formatting
-- Use tables for semester subject lists
-- Use bullet points for program lists
-- Keep responses focused and data-driven
-- DO NOT add inline source references (the UI handles that)
+- Use clear headers and structured formatting.
+- MANDATORY: Use valid GitHub Flavored Markdown (GFM) tables for all tabular data.
+- NEVER use tab-separated or space-aligned text for tables.
+- Each table MUST have a header row and a delimiter row (e.g., `|:---|:---|`).
+- If a course code has a slash (e.g., `ISLA1111/HUMN1111`), keep it on a single line within the cell.
+- Keep responses focused and data-driven.
+- DO NOT add inline source references (the UI handles that).
 
 ━━━━━━━━━━━━━━━━━━━
 MISSING DATA POLICY
