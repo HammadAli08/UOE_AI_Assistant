@@ -18,32 +18,37 @@ class VoiceTransliterator:
         self.openai_client = OpenAI(api_key=OPENAI_API_KEY)
         self.model = "gpt-4o-mini"
         
-    def _is_urdu(self, text: str) -> bool:
-        """Detects if string contains Arabic/Nastaliq script characters."""
-        return any('\u0600' <= c <= '\u06FF' for c in text)
+    def _requires_transliteration(self, text: str) -> bool:
+        """Detects if string contains ANY non-Latin alphabetical characters (e.g. Urdu, Hindi, Punjabi script)."""
+        for c in text:
+            # If it's a letter and outside basic ASCII/Extended Latin, it's a non-Latin script
+            if c.isalpha() and ord(c) > 255:
+                return True
+        return False
 
     @traceable(name="voice_transliterator.transliterate", run_type="chain")
     def transliterate(self, text: str) -> str:
         """
-        Transliterates Urdu script into Roman Urdu.
-        If no Urdu script is detected, returns the original text.
+        Transliterates any non-Latin script (Urdu/Hindi/Punjabi) into Roman script.
+        If no target script is detected, returns the original text.
         """
         if not text.strip():
             return text
             
-        if not self._is_urdu(text):
-            logger.info("🔠 No Urdu script detected. Skipping transliteration.")
+        if not self._requires_transliteration(text):
+            logger.info("🔠 Text is already in Roman/Latin script. Skipping transliteration.")
             return text
             
-        logger.info("🔠 Urdu script detected. Processing through LLM Transliterator.")
+        logger.info("🔠 Non-Latin script detected. Processing through LLM Transliterator to enforce Roman English/Urdu.")
         
         system_prompt = (
-            "Convert the following Urdu text into Roman Urdu (Latin script).\n"
+            "Convert the following text into Roman English (Latin script) format.\n"
+            "The input could be in Urdu, Hindi, Punjabi, or any other South Asian language script.\n"
             "RULES:\n"
-            "1. Preserve meaning exactly.\n"
-            "2. Do NOT translate to English. ONLY convert the script to Roman Urdu.\n"
-            "3. Do NOT change program names (BSCS, MS Physics), codes, or English words.\n"
-            "4. Only convert Urdu script into Roman Urdu.\n"
+            "1. Preserve the original meaning exactly.\n"
+            "2. Do NOT translate to pure English unless the original spoken word was English. Convert to Roman Urdu/Hindi/Punjabi (e.g. 'Acha agar supply aa jaye').\n"
+            "3. Do NOT change program names (BSCS, MS Physics), codes, or system keywords.\n"
+            "4. The output MUST be entirely in standard Roman English (A-Z, a-z) script.\n"
             "5. Return nothing but the transliterated text."
         )
         

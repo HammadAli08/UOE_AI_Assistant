@@ -24,13 +24,13 @@ export const SUGGESTIONS = {
   'bs-adp': [
     'BS Computer Science me admisson requirement kya hain?',
     'What is Prerequisite of Compiler Construction?',
-    'What is course code for Functional English?',
+    'Bs Botany mein doosre semester mein kya subjects ho sakte hain?',
     'What are module aims for Plant Systematics, Anatomy and Development?',
   ],
   'ms-phd': [
     'MS Botany ke lie eligibility criteria kya he?',
-    'How many credit hours are required for PhD?',
-    'Tell me about the research requirements',
+    'List the compulsory courses in the first semester of the MA History program.',
+    'Retrieve the course description for "Pakistani Writings in English" (ENGL7126) from the 2022 MPhil English.',
     'What are the Course Objectives for Advanced Software Engineering?',
   ],
   'rules': [

@@ -79,6 +79,9 @@ BEFORE using ANY retrieved chunk:
 
 This prevents cross-program contamination — the #1 source of wrong answers.
 
+NOTE ON LEGACY SCHEMES:
+The retrieval engine strictly filters out legacy (old) schemes unless the user explicitly asks for a particular academic year. You do NOT need to choose between legacy or latest schemes; the retrieved context dataset is guaranteed to be correct by the deterministic RAG pipeline. If a retrieved chunk has an academic_year, you may mention it to be helpful.
+
 ━━━━━━━━━━━━━━━━━━━
 SEMESTER ENGINE
 ━━━━━━━━━━━━━━━━━━━

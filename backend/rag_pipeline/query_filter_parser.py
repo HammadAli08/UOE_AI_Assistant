@@ -38,6 +38,7 @@ class ParsedQuery:
     """Result of parsing a user query into structured metadata filters."""
 
     # Extracted fields (None = not detected)
+    academic_year: Optional[str] = None
     program_name: Optional[str] = None
     degree_type: Optional[str] = None
     department: Optional[str] = None
@@ -53,22 +54,31 @@ class ParsedQuery:
         """
         Convert parsed fields to Pinecone metadata filter dict.
         Only includes fields that were successfully extracted.
-        Returns empty dict if nothing was parsed.
         """
         f: Dict[str, Any] = {}
+        
+        # ── Legacy Isolation Strict Filter ──
+        if self.academic_year:
+            f["academic_year"] = {"$eq": self.academic_year}
+        else:
+            f["is_legacy"] = {"$ne": True}
+            
         if self.program_name:
             f["program_name"] = {"$eq": self.program_name}
         if self.degree_type:
             f["degree_type"] = {"$eq": self.degree_type}
         if self.semester is not None:
             f["semester"] = {"$eq": self.semester}
-        if self.course_code:
+        # Only strictly filter by course_code if we specifically want the course details.
+        # Semester lists contain multiple courses but only one gets saved to the chunk's metadata!
+        if self.course_code and self.chunk_type == "course_detail":
             f["course_code"] = {"$eq": self.course_code}
         if self.chunk_type:
             f["chunk_type"] = {"$eq": self.chunk_type}
         # department is only used as a fallback when program_name is not found
         if self.department and not self.program_name:
             f["department"] = {"$eq": self.department}
+            
         return f
 
     def relaxed_filters(self) -> List[Dict[str, Any]]:
@@ -120,17 +130,29 @@ class ParsedQuery:
             if relaxed and relaxed not in stages:
                 stages.append(relaxed)
 
-        # Final: empty (pure semantic)
-        stages.append({})
+        # Final: semantic fallback (CRITICAL: preserve isolation filter)
+        base_semantic = {}
+        if self.academic_year:
+            base_semantic["academic_year"] = {"$eq": self.academic_year}
+        else:
+            base_semantic["is_legacy"] = {"$ne": True}
+            
+        if base_semantic not in stages:
+            stages.append(base_semantic)
 
         return stages
 
     @property
     def has_filters(self) -> bool:
-        return bool(self.to_pinecone_filter())
+        # returns True if there's any filter besides the mandatory legacy exclusion
+        f = self.to_pinecone_filter()
+        relevant_keys = [k for k in f.keys() if k not in ("is_legacy", "academic_year")]
+        return len(relevant_keys) > 0 or bool(self.academic_year)
 
     def __repr__(self) -> str:
         fields = []
+        if self.academic_year:
+            fields.append(f"year={self.academic_year}")
         if self.program_name:
             fields.append(f"prog={self.program_name}")
         if self.degree_type:
@@ -643,6 +665,9 @@ class QueryFilterParser:
 
         # ── Step 1: Extract course code (highest priority, most specific) ──
         self._extract_course_code(q, result)
+        
+        # ── Step 1.5: Extract academic year ──
+        self._extract_academic_year(q_normalized, result, namespace)
 
         # ── Step 2: Extract semester number ──
         self._extract_semester(q_lower, result)
@@ -694,6 +719,31 @@ class QueryFilterParser:
                         result.department = dept
                         result.matched_rules.append(f"dept_from_code:{dept}")
                 return
+
+    def _extract_academic_year(self, q_normalized: str, result: ParsedQuery, namespace: str) -> None:
+        """Extract academic year e.g. 2018, 2022 from query for bs-adp old schemes ONLY."""
+        if namespace != "bs-adp-schemes":
+            return
+
+        text_to_search = q_normalized
+        if result.course_code:
+            # We must remove the course code numbers to avoid false positive year
+            course_num = ''.join(c for c in result.course_code if c.isdigit())
+            if course_num:
+                text_to_search = text_to_search.replace(course_num, "")
+
+        m = re.search(r'\b(201\d|202\d|203\d)\b', text_to_search)
+        if m:
+            extracted_year = m.group(1)
+            year_int = int(extracted_year)
+            
+            # The year was only saved in metadata for "old schemes". New schemes do not have year metadata.
+            # So we only set this filter if the user asks for a pre-2023 year OR explicitly mentions "old"
+            is_old_scheme_query = year_int < 2023 or re.search(r'\b(old|previous|past|legacy|former)\b', q_normalized)
+            
+            if is_old_scheme_query:
+                result.academic_year = extracted_year
+                result.matched_rules.append(f"academic_year:{result.academic_year}")
 
     def _extract_semester(self, q_lower: str, result: ParsedQuery) -> None:
         """Extract semester number. No hard range cap — document data dictates valid values."""
