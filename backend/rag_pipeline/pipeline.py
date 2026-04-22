@@ -289,6 +289,21 @@ class RAGPipeline:
             enhanced_query = self.query_enhancer.enhance(user_query, chat_history=chat_history)
             logger.info("⏱ enhance: %.2fs", time.perf_counter() - t_enhance)
 
+        # ── Enhancement fallback guard ───────────────────────────────────
+        # If enhancer returned the raw query unchanged (failed/timeout),
+        # AND we have chat history, build a context-injected query manually
+        # by prepending the last assistant turn so filter parser has something to parse.
+        if enhanced_query.strip().lower() == user_query.strip().lower() and chat_history:
+            last_assistant = next(
+                (m["content"] for m in reversed(chat_history) if m["role"] == "assistant"),
+                None,
+            )
+            if last_assistant:
+                # Truncate to avoid token bloat — first 120 chars is enough for context
+                context_hint = last_assistant[:120].strip()
+                enhanced_query = f"{context_hint} {user_query}".strip()
+                logger.info("⚠️ Enhancer fallback — injected chat context manually: '%s'", enhanced_query[:100])
+
         # The retrieval query: use enhanced if available, else raw
         retrieval_query = enhanced_query
 
@@ -296,7 +311,7 @@ class RAGPipeline:
         parsed_query = None
         filter_info = None
         if pinecone_namespace in FILTER_ENABLED_NAMESPACES:
-            parsed_query = self.filter_parser.parse(user_query, pinecone_namespace)
+            parsed_query = self.filter_parser.parse(enhanced_query, pinecone_namespace)
             if parsed_query.has_filters:
                 filter_info = {
                     "parsed": repr(parsed_query),
@@ -563,6 +578,21 @@ class RAGPipeline:
             enhanced_query = self.query_enhancer.enhance(user_query, chat_history=chat_history)
             logger.info("⏱ enhance: %.2fs", time.perf_counter() - t_enhance)
 
+        # ── Enhancement fallback guard ───────────────────────────────────
+        # If enhancer returned the raw query unchanged (failed/timeout),
+        # AND we have chat history, build a context-injected query manually
+        # by prepending the last assistant turn so filter parser has something to parse.
+        if enhanced_query.strip().lower() == user_query.strip().lower() and chat_history:
+            last_assistant = next(
+                (m["content"] for m in reversed(chat_history) if m["role"] == "assistant"),
+                None,
+            )
+            if last_assistant:
+                # Truncate to avoid token bloat — first 120 chars is enough for context
+                context_hint = last_assistant[:120].strip()
+                enhanced_query = f"{context_hint} {user_query}".strip()
+                logger.info("⚠️ Enhancer fallback — injected chat context manually: '%s'", enhanced_query[:100])
+
         # The retrieval query: use enhanced if available, else raw
         retrieval_query = enhanced_query
 
@@ -570,7 +600,7 @@ class RAGPipeline:
         parsed_query = None
         filter_info = None
         if pinecone_namespace in FILTER_ENABLED_NAMESPACES:
-            parsed_query = self.filter_parser.parse(user_query, pinecone_namespace)
+            parsed_query = self.filter_parser.parse(enhanced_query, pinecone_namespace)
             if parsed_query.has_filters:
                 filter_info = {
                     "parsed": repr(parsed_query),

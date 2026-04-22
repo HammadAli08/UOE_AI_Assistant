@@ -19,10 +19,9 @@ function Navbar() {
   }, []);
 
   const navLinks = [
-    { label: 'Capabilities', href: '#features' },
-    { label: 'Knowledge Bases', href: '#knowledge-bases' },
+    { label: 'Home', href: '/', isRoute: true },
     { label: 'Explorer', href: '/knowledge-bases', isRoute: true },
-    { label: 'Team', href: '#team' },
+    { label: 'About Us', href: '/about', isRoute: true },
   ];
 
   const handleNav = (href, isRoute) => {
@@ -98,7 +97,7 @@ function Navbar() {
           </button>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-8 ml-auto mr-12">
             {navLinks.map((link) => (
               <button
                 key={link.href}

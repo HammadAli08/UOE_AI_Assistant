@@ -125,7 +125,7 @@ RRF_K = int(os.getenv("RRF_K", "60"))
 # TIMEOUTS
 # =============================================================================
 
-QUERY_ENHANCER_TIMEOUT_SECONDS = float(os.getenv("QUERY_ENHANCER_TIMEOUT_SECONDS", "1.5"))
+QUERY_ENHANCER_TIMEOUT_SECONDS = float(os.getenv("QUERY_ENHANCER_TIMEOUT_SECONDS", "5.0"))
 
 # =============================================================================
 # SMART RAG CONFIGURATION

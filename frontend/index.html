@@ -34,25 +34,25 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Premium font stack: Outfit (display) + Inter (body) + JetBrains Mono (code) -->
+    <!-- Only load the weights actually used: Oswald 600/700, Merriweather 400/700, JetBrains Mono 400 -->
     <link
       rel="preload"
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Merriweather:wght@400;700&family=JetBrains+Mono:wght@400&display=swap"
       as="style"
       onload="this.onload=null;this.rel='stylesheet'"
     />
     <noscript>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Merriweather:wght@400;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
     </noscript>
 
     <!-- ── Critical inline CSS: prevent FOUC ── -->
     <style>
       *,::before,::after{box-sizing:border-box}
       html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-      body{margin:0;background:#070B14;color:#E8E4DC;font-family:Inter,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+      body{margin:0;background:#070B14;color:#E8E4DC;font-family:Merriweather,Georgia,serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
       #root{min-height:100dvh}
       /* Prevent layout shift from font swap */
-      .font-display{font-family:Outfit,Inter,sans-serif}
+      .font-display{font-family:Oswald,Impact,sans-serif}
     </style>
   </head>
   <body>

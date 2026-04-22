@@ -12,9 +12,9 @@ Extends the self-correcting retrieval loop and adds:
 AGENTIC_RAG_CONFIG = {
     # ── Retry / quality controls (self-correcting loop) ──────────
     "max_retries": 5,
-    "min_relevant_chunks": 1,
+    "min_relevant_chunks": 2,
     "confidence_threshold": 0.65,
-    "early_success_threshold": 2,
+    "early_success_threshold": 3,
     "avg_confidence_threshold": 0.70,
     "retry_top_k_boost": 4,
 

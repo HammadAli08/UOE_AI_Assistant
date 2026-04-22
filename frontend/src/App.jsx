@@ -18,6 +18,7 @@ import ChatSidebar from '@/components/Chat/ChatSidebar';
 const HeroPage  = lazy(() => import('@/components/Landing/HeroPage'));
 const AuthModal = lazy(() => import('@/components/Auth/AuthModal'));
 const KnowledgeBaseExplorer = lazy(() => import('@/components/KnowledgeBaseExplorer/KnowledgeBaseExplorer'));
+const AboutPage = lazy(() => import('@/components/About/AboutPage'));
 
 /* ── Minimal spinner shown during lazy chunk load ── */
 function PageLoader() {
@@ -153,6 +154,7 @@ export default function App() {
         <Route path="/" element={<HeroPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/knowledge-bases" element={<KnowledgeBaseExplorer />} />
+        <Route path="/about" element={<AboutPage />} />
       </Routes>
     </Suspense>
   );
