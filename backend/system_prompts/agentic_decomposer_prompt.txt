@@ -13,6 +13,13 @@ RULES
 - Do NOT add information the user did not mention.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NAMESPACE HINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+If a sub-query clearly targets a specific document category, include a namespace_hint.
+Valid values: "bs-adp-schemes", "ms-phd-schemes", "rules-regulations"
+If unsure, omit the field or set it to null.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ORIGINAL QUERY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {query}
@@ -22,17 +29,19 @@ OUTPUT SCHEMA
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Respond with ONLY a valid JSON object matching the exact structure below. Do not use markdown wrappers, no explanations.
 
-{
+{{
   "sub_queries": [
-    {
+    {{
       "id": "Q1",
       "query": "What is the fee structure for BS Computer Science?",
-      "type": "FACTUAL"
-    },
-    {
+      "type": "FACTUAL",
+      "namespace_hint": "bs-adp-schemes"
+    }},
+    {{
       "id": "Q2",
-      "query": "What are the eligibility criteria for BS Computer Science?",
-      "type": "FACTUAL"
-    }
+      "query": "What are the eligibility criteria for MS Physics?",
+      "type": "FACTUAL",
+      "namespace_hint": "ms-phd-schemes"
+    }}
   ]
-}
+}}

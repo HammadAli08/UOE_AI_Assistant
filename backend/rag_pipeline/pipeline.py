@@ -39,6 +39,7 @@ from .retriever import get_retriever
 from .generator import get_generator
 from .memory import get_memory
 from .agentic_rag import AgentState, get_agentic_graph
+from .agentic_rag.utils import apply_grounding_disclaimer
 
 logger = logging.getLogger(__name__)
 
@@ -482,10 +483,9 @@ class RAGPipeline:
                         query=sq_query, documents=sq_docs, namespace=pinecone_namespace,
                         chat_history=chat_history, session_id=session_id, enhanced_query=sq_query,
                     )
-                    # Isolated hallucination check per sub-query
+                    # Isolated hallucination check per sub-query (three-tier)
                     is_grnd, score, claims = self.agentic_graph.hallucination_guard.check(ans, sq_docs)
-                    if not is_grnd and score < 0.4:
-                        ans += "\n\n⚠️ *Note: Some details may not be directly verified from available documents.*"
+                    ans = apply_grounding_disclaimer(ans, score)
                     part_ans = f"**{sq_query}**\n{ans}"
                     final_sources.extend(_extract_sources(sq_docs))
                 full_answer_parts.append(part_ans)
@@ -818,8 +818,8 @@ class RAGPipeline:
                     
                 merged_local_ans = "".join(local_ans_parts)
                 is_grnd, score, claims = self.agentic_graph.hallucination_guard.check(merged_local_ans, sq_docs)
-                if not is_grnd and score < 0.4:
-                    discl = "\n\n⚠️ *Note: Some details may not be directly verified from available documents.*"
+                discl = apply_grounding_disclaimer("", score)
+                if discl:  # non-empty means a disclaimer was added
                     full_answer_parts.append(discl)
                     yield {"type": "token", "content": discl}
                     

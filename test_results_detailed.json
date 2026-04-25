@@ -1,0 +1,107 @@
+[
+  {
+    "name": "Namespace Resolution",
+    "result": "PASS",
+    "details": "Resolved to bs-adp-schemes"
+  },
+  {
+    "name": "Voice Transliteration",
+    "result": "PASS",
+    "details": "Mera daakhla kab hoga?"
+  },
+  {
+    "name": "Filter Parsing",
+    "result": "PASS",
+    "details": "ParsedQuery(dept=Computer Science, code=COMP1101, type=course_detail, conf=0.60)"
+  },
+  {
+    "name": "RAG Query (Standard)",
+    "result": "PASS",
+    "details": "Prof. Dr. Aqif Anwar Chaudhry is the Vice Chancellor of the University of Education. \n\nContact detai"
+  },
+  {
+    "name": "Agentic Decomposition",
+    "result": "PASS",
+    "details": {
+      "intent": "DECOMPOSE",
+      "steps": [
+        {
+          "node": "classify_intent",
+          "elapsed_ms": 1248.0,
+          "intent": "DECOMPOSE"
+        },
+        {
+          "node": "decompose",
+          "elapsed_ms": 1249.3,
+          "sub_queries": [
+            {
+              "id": "Q1",
+              "query": "Tell me about BS CS and MS Mathematics",
+              "type": "FACTUAL"
+            }
+          ],
+          "count": 1
+        },
+        {
+          "node": "filtered_retrieve",
+          "elapsed_ms": 5153.3,
+          "query": "QUERY: program overview BS Computer Science MSc Mathematics program objectives v",
+          "attempt": 0,
+          "docs_found": 5,
+          "top_k": 5,
+          "quality": "FILTERED",
+          "filter_used": {
+            "is_legacy": {
+              "$ne": true
+            },
+            "program_name": {
+              "$eq": "BS Computer Science"
+            },
+            "degree_type": {
+              "$eq": "BS"
+            },
+            "chunk_type": {
+              "$eq": "program_overview"
+            }
+          }
+        },
+        {
+          "node": "grade",
+          "elapsed_ms": 8898.5,
+          "relevant": 2,
+          "irrelevant": 3,
+          "total": 5
+        },
+        {
+          "node": "quality_gate_Q1",
+          "elapsed_ms": 8898.5,
+          "decision": "pass",
+          "relevant": 2
+        },
+        {
+          "node": "decompose_retrieval_completed",
+          "elapsed_ms": 8898.7,
+          "results_keys": [
+            "Q1"
+          ]
+        }
+      ],
+      "total_retrievals": 1,
+      "total_chunks_graded": 5,
+      "query_rewrites": [],
+      "final_relevant_chunks": 0,
+      "decomposed_queries": [
+        {
+          "id": "Q1",
+          "query": "Tell me about BS CS and MS Mathematics",
+          "type": "FACTUAL"
+        }
+      ],
+      "hallucination_score": 1.0,
+      "is_grounded": true,
+      "used_fallback": false,
+      "best_effort": false,
+      "clarification_asked": false
+    }
+  }
+]

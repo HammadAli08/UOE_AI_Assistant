@@ -29,6 +29,11 @@ class AgentState:
     intent: str = ""                          # DIRECT / RETRIEVE / DECOMPOSE / CLARIFY
     sub_queries: List[Dict[str, str]] = field(default_factory=list)
 
+    # ── Classifier outputs (populated by _node_classify_intent) ──────
+    # Stored on state (not the classifier singleton) for concurrency safety.
+    fast_response: Optional[str] = None
+    suggested_namespace: Optional[str] = None
+
     # ── Retrieval state ──────────────────────────────────────────────
     current_query: str = ""
     documents: List[Dict] = field(default_factory=list)
@@ -58,6 +63,9 @@ class AgentState:
     direct_response: Optional[str] = None
     used_fallback: bool = False
     best_effort: bool = False
+
+    # ── Embedding cache (reuse across voice normalizer → retriever) ──
+    embedding_cache: Optional[List[float]] = None
 
     # ── Timing ───────────────────────────────────────────────────────
     _start_time: float = field(default_factory=time.perf_counter)

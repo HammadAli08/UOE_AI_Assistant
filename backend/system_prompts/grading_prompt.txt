@@ -34,7 +34,7 @@ CONFIDENCE SCORING
 RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - Grade each chunk independently against the user question.
-- A chunk is "relevant" if confidence >= 0.65.
+- A chunk is "relevant" if confidence >= {confidence_threshold}.
 - Be generous with chunks that contain course names, prerequisites, or credit hours
   related to the question — even if not an exact match, they may provide useful context.
 - Do NOT reject a chunk just because it covers a broader scope than the question.

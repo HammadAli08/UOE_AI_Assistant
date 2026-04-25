@@ -102,6 +102,7 @@ class QueryRewriter:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 max_tokens=100,
+                timeout=AGENTIC_RAG_CONFIG.get("llm_timeout", 15),
             )
             rewritten = resp.choices[0].message.content.strip()
 

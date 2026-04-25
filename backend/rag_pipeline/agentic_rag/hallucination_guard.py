@@ -97,6 +97,7 @@ class HallucinationGuard:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=AGENTIC_RAG_CONFIG["hallucination_temperature"],
                 max_tokens=AGENTIC_RAG_CONFIG["hallucination_max_tokens"],
+                timeout=AGENTIC_RAG_CONFIG.get("llm_timeout", 15),
             )
             raw = resp.choices[0].message.content.strip()
 

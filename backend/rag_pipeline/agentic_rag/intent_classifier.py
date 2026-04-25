@@ -9,12 +9,15 @@ Classifies each incoming user query into one of four intents:
 
 Uses a fast-path heuristic for common greetings to avoid LLM latency,
 then falls back to GPT-4o-mini for complex queries.
+
+Returns a tuple (intent, fast_response, suggested_namespace) from classify()
+to avoid storing per-request state on the singleton instance.
 """
 
 import json
 import re
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from openai import OpenAI
 from langsmith import traceable
@@ -72,16 +75,34 @@ _DIRECT_FAST_RESPONSES = {
     "bye": "Goodbye! Feel free to return if you have more questions.",
 }
 
+# ── Named-entity pattern for decomposition guard ─────────────────────────
+# Matches full program strings like "BS CS", "MS Physics", "PhD Education"
+_PROGRAM_FULL_PATTERN = re.compile(
+    r'\b(BS|MS|PhD|MPhil|MA|MSc|ADP|BBA|BFA|B\.?Ed|M\.?Ed)\s+\w+',
+    re.IGNORECASE,
+)
+# Matches standalone degree prefixes as a fallback
+_PROGRAM_PREFIX_PATTERN = re.compile(
+    r'\b(BS|MS|PhD|MPhil|MA|MSc|ADP|BBA|BFA|B\.?Ed|M\.?Ed)\b',
+    re.IGNORECASE,
+)
+
 
 class IntentClassifier:
-    """Classifies user queries into action intents."""
+    """Classifies user queries into action intents.
+
+    Note on concurrency: classify() returns all per-request state as a tuple
+    rather than storing it on the instance. This is critical because the
+    classifier is used as a singleton — instance attributes would leak
+    between concurrent requests.
+    """
 
     def __init__(self):
         self.client = OpenAI(api_key=OPENAI_API_KEY)
         self.model = AGENTIC_RAG_CONFIG["intent_model"]
         self._prompt_template: Optional[str] = None
 
-    def _is_fast_path_direct(self, query: str) -> tuple[bool, Optional[str]]:
+    def _is_fast_path_direct(self, query: str) -> Tuple[bool, Optional[str]]:
         """
         Fast-path check for obvious DIRECT queries without LLM call.
 
@@ -153,22 +174,26 @@ class IntentClassifier:
         self,
         query: str,
         chat_history: Optional[List[Dict[str, str]]] = None,
-    ) -> str:
+    ) -> Tuple[str, Optional[str], Optional[str]]:
         """
         Classify the user query into an intent.
 
         Uses fast-path heuristics for common greetings to avoid LLM latency.
         Falls back to LLM classification for complex queries.
-        Returns one of: DIRECT, RETRIEVE, DECOMPOSE, CLARIFY
-        Falls back to RETRIEVE on any error.
+
+        Returns:
+            (intent, fast_response, suggested_namespace)
+            - intent: one of DIRECT, RETRIEVE, DECOMPOSE, CLARIFY
+            - fast_response: pre-defined response for fast-path DIRECT (None otherwise)
+            - suggested_namespace: LLM-suggested namespace for retrieval (None otherwise)
+
+        Falls back to (RETRIEVE, None, None) on any error.
         """
         # ── Fast-path: Check for obvious DIRECT patterns first ─────────────
         is_direct, fast_response = self._is_fast_path_direct(query)
         if is_direct:
             logger.info("Fast-path DIRECT (no LLM call): '%s'", query[:60])
-            # Store fast response for use by direct_answer node
-            self._fast_response = fast_response
-            return INTENT_DIRECT
+            return INTENT_DIRECT, fast_response, None
 
         # ── Slow-path: Use LLM for non-obvious queries ───────────────────
         try:
@@ -183,6 +208,7 @@ class IntentClassifier:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=AGENTIC_RAG_CONFIG["intent_temperature"],
                 max_tokens=AGENTIC_RAG_CONFIG["intent_max_tokens"],
+                timeout=15,
             )
             raw = resp.choices[0].message.content.strip()
 
@@ -213,8 +239,7 @@ class IntentClassifier:
                     if found_intent == INTENT_DECOMPOSE:
                         found_intent = self._enforce_decomposition_guard(query, found_intent)
                         
-                    self._suggested_namespace = suggested_ns
-                    return found_intent
+                    return found_intent, None, suggested_ns
 
             except (json.JSONDecodeError, ValueError):
                 pass  # fall through to string-search fallback
@@ -226,46 +251,73 @@ class IntentClassifier:
                     logger.info("Intent classified via text fallback: %s", intent)
                     if intent == INTENT_DECOMPOSE:
                         intent = self._enforce_decomposition_guard(query, intent)
-                    return intent
+                    return intent, None, None
 
             logger.warning(
                 "Intent classifier returned unparseable response — defaulting to RETRIEVE",
             )
-            return INTENT_RETRIEVE
+            return INTENT_RETRIEVE, None, None
 
         except Exception as exc:
             logger.warning("Intent classification failed: %s — defaulting to RETRIEVE", exc)
-            return INTENT_RETRIEVE
-
-    def get_suggested_namespace(self) -> Optional[str]:
-        """Get the namespace suggested by the LLM during classification."""
-        return getattr(self, '_suggested_namespace', None)
-
-    def clear_suggestions(self) -> None:
-        """Clear the suggested namespace."""
-        if hasattr(self, '_suggested_namespace'):
-            self._suggested_namespace = None
-
-    def get_fast_response(self) -> Optional[str]:
-        """Get pre-defined response from fast-path (if available)."""
-        return getattr(self, '_fast_response', None)
-
-    def clear_fast_response(self) -> None:
-        """Clear stored fast response after use."""
-        if hasattr(self, '_fast_response'):
-            self._fast_response = None
+            return INTENT_RETRIEVE, None, None
 
     def _enforce_decomposition_guard(self, query: str, current_intent: str) -> str:
         """
-        Guard against the LLM over-triggering DECOMPOSE for short/voice queries 
-        that lack fundamental conjunctions indicating multi-intent structure.
+        Guard against the LLM over-triggering DECOMPOSE for queries that
+        don't actually need multi-topic splitting.
+
+        Uses a hybrid approach:
+          1. Count distinct full program-name entities (e.g. "BS CS", "MS Physics")
+             If >= 2 distinct programs → allow DECOMPOSE
+          2. Count conjunctions as a secondary signal
+             If >= 1 conjunction AND >= 8 words → allow DECOMPOSE
+          3. Only block if no clear multi-topic signal detected in short queries
         """
         words = [w.strip() for w in query.lower().split()]
+        word_count = len(words)
+
+        # Signal 1: Distinct full program entities (e.g. "BS CS" vs "MS Physics")
+        full_matches = _PROGRAM_FULL_PATTERN.findall(query)
+        # Normalize to uppercase for dedup: "BS CS" and "bs cs" are the same
+        distinct_full = len(set(m.upper() for m in full_matches)) if full_matches else 0
+
+        if distinct_full >= 2:
+            logger.info(
+                "✅ Decomposition allowed: %d distinct program entities detected",
+                distinct_full,
+            )
+            return current_intent
+
+        # Signal 1b: Distinct degree prefixes as fallback (e.g. "BS" and "MS")
+        prefix_matches = _PROGRAM_PREFIX_PATTERN.findall(query)
+        distinct_prefixes = len(set(m.upper() for m in prefix_matches)) if prefix_matches else 0
+
+        if distinct_prefixes >= 2:
+            logger.info(
+                "✅ Decomposition allowed: %d distinct degree prefixes detected",
+                distinct_prefixes,
+            )
+            return current_intent
+
+        # Signal 2: Conjunctions in sufficiently long queries
         conjunctions = sum(1 for w in words if w in ['and', 'or', 'aur', 'also', 'furthermore', 'plus'])
-        
-        if conjunctions < 1 and len(words) < 15:
-            logger.info("🛡️ Decomposition blocked: 0 conjunctions in <15 words. Downgrading to RETRIEVE.")
+        if conjunctions >= 1 and word_count >= 8:
+            logger.info(
+                "✅ Decomposition allowed: %d conjunctions in %d-word query",
+                conjunctions, word_count,
+            )
+            return current_intent
+
+        # Block: no clear multi-topic signal in a short query
+        if word_count < 15:
+            logger.info(
+                "🛡️ Decomposition blocked: no multi-topic signal in %d-word query. "
+                "Downgrading to RETRIEVE.",
+                word_count,
+            )
             return INTENT_RETRIEVE
+
         return current_intent
 
 

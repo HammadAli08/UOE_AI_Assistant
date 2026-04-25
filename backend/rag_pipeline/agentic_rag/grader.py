@@ -51,6 +51,7 @@ class ChunkGrader:
                 self._prompt_template = (
                     "Question: {query}\n\n"
                     "{chunks_block}\n\n"
+                    "A chunk is relevant if confidence >= {confidence_threshold}.\n\n"
                     "Respond with a JSON array of objects, one per chunk:\n"
                     '[{{"index": 0, "relevant": true/false, '
                     '"confidence": 0.0-1.0, "reason": "..."}}]'
@@ -99,6 +100,7 @@ class ChunkGrader:
             prompt = self.prompt_template.format(
                 query=query,
                 chunks_block=chunks_block,
+                confidence_threshold=self.confidence_threshold,
             )
 
             max_tokens = max(200, 60 * len(chunks))
@@ -108,6 +110,7 @@ class ChunkGrader:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.0,
                 max_tokens=max_tokens,
+                timeout=AGENTIC_RAG_CONFIG["llm_timeout"],
             )
             raw = resp.choices[0].message.content.strip()
 
@@ -125,7 +128,7 @@ class ChunkGrader:
 
         for i, chunk in enumerate(chunks):
             grade = grades[i] if i < len(grades) else {
-                "relevant": True, "confidence": 0.5, "reason": "Missing grade"
+                "relevant": False, "confidence": 0.0, "reason": "Missing grade entry"
             }
 
             if grade["relevant"] and grade["confidence"] >= self.confidence_threshold:
@@ -144,7 +147,12 @@ class ChunkGrader:
 
     @staticmethod
     def _parse_batch_grades(raw: str, expected: int) -> List[Dict]:
-        """Parse the LLM's JSON array response."""
+        """Parse the LLM's JSON array response.
+
+        On parse failure, returns all chunks as irrelevant with 0.0 confidence
+        so the retry loop can attempt recovery. This is the safe default —
+        silently accepting all chunks on parse failure would bypass quality gates.
+        """
         cleaned = raw.strip()
         if cleaned.startswith("```"):
             cleaned = cleaned.split("\n", 1)[-1]
@@ -164,16 +172,20 @@ class ChunkGrader:
                     })
                 while len(results) < expected:
                     results.append({
-                        "relevant": True,
-                        "confidence": 0.5,
-                        "reason": "Missing from LLM response",
+                        "relevant": False,
+                        "confidence": 0.0,
+                        "reason": "Missing from LLM response — rejected for safety",
                     })
                 return results
         except (json.JSONDecodeError, ValueError, KeyError):
             pass
 
-        logger.warning("Could not parse batch grades, accepting all chunks")
+        logger.error(
+            "Failed to parse batch grades JSON — rejecting all %d chunks for safety. "
+            "Raw response: %s",
+            expected, raw[:200],
+        )
         return [
-            {"relevant": True, "confidence": 0.75, "reason": "Parse failure fallback"}
+            {"relevant": False, "confidence": 0.0, "reason": "JSON parse failure — rejected for safety"}
             for _ in range(expected)
         ]

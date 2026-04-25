@@ -42,6 +42,7 @@ from langsmith import traceable
 from ..config import OPENAI_API_KEY, SYSTEM_PROMPTS_DIR
 from .grader import ChunkGrader
 from .rewriter import QueryRewriter
+from .utils import apply_grounding_disclaimer
 
 from .config import (
     AGENTIC_RAG_CONFIG,
@@ -90,26 +91,36 @@ class AgenticRAGGraph:
         self.retry_boost = AGENTIC_RAG_CONFIG["retry_top_k_boost"]
         self.early_success = AGENTIC_RAG_CONFIG["early_success_threshold"]
         self.quality_threshold = AGENTIC_RAG_CONFIG["avg_confidence_threshold"]
-        self.max_hallucination_retries = AGENTIC_RAG_CONFIG["max_hallucination_retries"]
+        self.llm_timeout = AGENTIC_RAG_CONFIG["llm_timeout"]
 
     # ═══════════════════════════════════════════════════════════════════
     # GRAPH NODES
     # ═══════════════════════════════════════════════════════════════════
 
     def _node_classify_intent(self, state: AgentState) -> None:
-        """Node 1: Classify user intent."""
-        state.intent = self.intent_classifier.classify(
+        """Node 1: Classify user intent.
+
+        Unpacks the (intent, fast_response, suggested_namespace) tuple
+        from the classifier and stores everything on the per-request
+        AgentState — never on the singleton classifier instance.
+        """
+        intent, fast_response, suggested_ns = self.intent_classifier.classify(
             state.user_query, state.chat_history,
         )
-        state.log_step("classify_intent", intent=state.intent)
+        state.intent = intent
+        state.fast_response = fast_response
+        state.suggested_namespace = suggested_ns
+        state.log_step(
+            "classify_intent",
+            intent=state.intent,
+            suggested_namespace=suggested_ns,
+        )
 
     def _node_direct_answer(self, state: AgentState) -> None:
         """Node: Answer directly without retrieval (greetings, meta questions)."""
-        # ── Fast-path: Use pre-defined response for common greetings ───────
-        fast_response = self.intent_classifier.get_fast_response()
-        if fast_response:
-            state.direct_response = fast_response
-            self.intent_classifier.clear_fast_response()
+        # ── Fast-path: Use pre-defined response from classifier ───────────
+        if state.fast_response:
+            state.direct_response = state.fast_response
             state.log_step("direct_answer", response_length=len(state.direct_response), fast_path=True)
             return
 
@@ -133,6 +144,7 @@ class AgenticRAGGraph:
                 ],
                 temperature=0.5,
                 max_tokens=200,
+                timeout=self.llm_timeout,
             )
             state.direct_response = resp.choices[0].message.content.strip()
         except Exception as exc:
@@ -165,6 +177,7 @@ class AgenticRAGGraph:
                 ],
                 temperature=0.3,
                 max_tokens=200,
+                timeout=self.llm_timeout,
             )
             state.clarification = resp.choices[0].message.content.strip()
         except Exception as exc:
@@ -186,14 +199,22 @@ class AgenticRAGGraph:
             count=len(state.sub_queries),
         )
 
-    def _node_retrieve(self, state: AgentState, query: str, attempt: int) -> List[Dict]:
-        """Node: Retrieve documents for a single query."""
+    def _node_retrieve(self, state: AgentState, query: str, attempt: int, namespace: Optional[str] = None) -> List[Dict]:
+        """Node: Retrieve documents for a single query.
+
+        Args:
+            state:     The agent state.
+            query:     The query to retrieve for.
+            attempt:   Current retry attempt (0-indexed).
+            namespace: Override namespace. If None, uses state.namespace.
+        """
         retrieve_k = state.top_k + (self.retry_boost * attempt)
+        ns = namespace or state.namespace
         
         if state.filter_stages:
             documents, filter_used, quality = self.retriever.filtered_retrieve(
                 query=query,
-                namespace=state.namespace,
+                namespace=ns,
                 filter_stages=state.filter_stages,
                 top_k=retrieve_k,
             )
@@ -205,11 +226,12 @@ class AgenticRAGGraph:
                 top_k=retrieve_k,
                 quality=quality,
                 filter_used=filter_used,
+                namespace=ns,
             )
         else:
             documents = self.retriever.ensemble_retrieve(
                 query=query,
-                namespace=state.namespace,
+                namespace=ns,
                 top_k=retrieve_k,
             )
             state.log_step(
@@ -218,6 +240,7 @@ class AgenticRAGGraph:
                 attempt=attempt,
                 docs_found=len(documents),
                 top_k=retrieve_k,
+                namespace=ns,
             )
             
         state.total_retrievals += 1
@@ -275,13 +298,12 @@ class AgenticRAGGraph:
     def _retrieval_loop(self, state: AgentState, query: str) -> None:
         """
         Self-correcting retrieval loop for a single query.
-        Self-correcting retrieval loop for a single query.
-        Uses grade→rewrite→retry pattern with
+        Uses grade→rewrite→retry pattern.
         """
         current_query = query
 
         for attempt in range(self.max_retries + 1):
-            state.attempt = attempt  # Kept for standard standard path
+            state.attempt = attempt  # Kept for standard path
 
             # Retrieve
             documents = self._node_retrieve(state, current_query, attempt)
@@ -348,10 +370,23 @@ class AgenticRAGGraph:
                     total_relevant=len(state.all_relevant),
                 )
 
-    def _isolated_retrieval_loop(self, state: AgentState, sub_query_id: str, query: str) -> None:
+    def _isolated_retrieval_loop(
+        self,
+        state: AgentState,
+        sub_query_id: str,
+        query: str,
+        namespace: str,
+    ) -> None:
         """
         Isolated self-correcting retrieval loop for a sub-query.
         Stores results strictly within state.sub_query_results.
+
+        Args:
+            state:        The shared agent state (only sub_query_results is written).
+            sub_query_id: Identifier like "Q1", "Q2".
+            query:        The sub-query text.
+            namespace:    The namespace to retrieve from (passed as parameter,
+                          never mutated on state — safe for concurrent threads).
         """
         current_query = query
         all_relevant = []
@@ -359,7 +394,7 @@ class AgenticRAGGraph:
         seen_ids = set()
 
         for attempt in range(self.max_retries + 1):
-            documents = self._node_retrieve(state, current_query, attempt)
+            documents = self._node_retrieve(state, current_query, attempt, namespace=namespace)
             if not documents:
                 if attempt < self.max_retries:
                     current_query = self._node_rewrite(state, query, all_irrelevant, attempt)
@@ -405,7 +440,8 @@ class AgenticRAGGraph:
             "best_effort": best_effort,
             "is_grounded": True,
             "grounding_score": 1.0,
-            "answer": ""
+            "answer": "",
+            "namespace_used": namespace,
         }
 
     # ═══════════════════════════════════════════════════════════════════
@@ -444,8 +480,17 @@ class AgenticRAGGraph:
                 sq_query = sq_dict.get("query")
                 if not sq_id or not sq_query:
                     return
+
+                # Determine namespace: use sub-query hint if available,
+                # fall back to classifier suggestion, then top-level namespace.
+                sq_namespace = (
+                    sq_dict.get("namespace_hint")
+                    or state.suggested_namespace
+                    or state.namespace
+                )
+
                 enhanced = self.query_enhancer.enhance(sq_query, state.chat_history)
-                self._isolated_retrieval_loop(state, sq_id, enhanced)
+                self._isolated_retrieval_loop(state, sq_id, enhanced, namespace=sq_namespace)
 
             # Launch parallel threads 
             with concurrent.futures.ThreadPoolExecutor(max_workers=len(state.sub_queries) or 1) as executor:
@@ -511,22 +556,25 @@ class AgenticRAGGraph:
         This is a separate method because generation is handled by
         the pipeline (which supports streaming). After the full
         answer is assembled, the pipeline calls this for verification.
+
+        Uses the three-tier grounding system:
+          score >= 0.75  → grounded   — pass as-is
+          0.40 <= score  → partial    — soft warning
+          score < 0.40   → ungrounded — strong disclaimer
         """
         if not state.answer or not state.all_relevant:
             return state
 
         self._node_hallucination_check(state)
 
-        if not state.is_grounded and state.grounding_score < 0.4:
-            # Severely ungrounded — add disclaimer
-            state.answer += (
-                "\n\n⚠️ *Note: Some details in this response may not be directly "
-                "verified from the available documents. Please verify critical "
-                "information with the university administration.*"
-            )
+        # Apply three-tier disclaimer using shared utility
+        state.answer = apply_grounding_disclaimer(state.answer, state.grounding_score)
+
+        if state.grounding_score < AGENTIC_RAG_CONFIG["hallucination_threshold"]:
             state.log_step(
                 "hallucination_action",
                 action="disclaimer_added",
+                tier="partial" if state.grounding_score >= AGENTIC_RAG_CONFIG["hallucination_partial_threshold"] else "ungrounded",
                 score=round(state.grounding_score, 2),
             )
 
@@ -573,6 +621,7 @@ class AgenticRAGGraph:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 max_tokens=150,
+                timeout=self.llm_timeout,
             )
             suggestions = resp.choices[0].message.content.strip()
 

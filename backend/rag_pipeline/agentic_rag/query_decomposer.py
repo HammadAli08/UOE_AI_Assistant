@@ -43,7 +43,8 @@ class QueryDecomposer:
                 self._prompt_template = (
                     "Break this complex query into {max_sub_queries} simple sub-queries.\n"
                     "Query: {query}\n"
-                    'Respond with ONLY a JSON array of strings: ["sub-query 1", "sub-query 2"]'
+                    'Respond with ONLY a JSON object: {{"sub_queries": ['
+                    '{{"id": "Q1", "query": "...", "type": "FACTUAL"}}]}}'
                 )
         return self._prompt_template
 
@@ -52,7 +53,8 @@ class QueryDecomposer:
         """
         Decompose a complex query into independent sub-queries.
 
-        Returns a list of sub-query dicts with id, type and query.
+        Returns a list of sub-query dicts with id, type, query,
+        and optional namespace_hint.
         """
         fallback_query = [{"id": "Q1", "query": query, "type": "FACTUAL"}]
         try:
@@ -66,7 +68,8 @@ class QueryDecomposer:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=AGENTIC_RAG_CONFIG["decomposer_temperature"],
                 max_tokens=AGENTIC_RAG_CONFIG["decomposer_max_tokens"],
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
+                timeout=AGENTIC_RAG_CONFIG["llm_timeout"],
             )
             raw = resp.choices[0].message.content.strip()
 
@@ -90,7 +93,12 @@ class QueryDecomposer:
 
     @staticmethod
     def _parse_sub_queries(raw: str) -> List[dict]:
-        """Parse the LLM's JSON object response."""
+        """Parse the LLM's JSON object response.
+
+        Normalizes sub-query IDs to Q1, Q2, ... regardless of what the LLM
+        generated, ensuring downstream code can rely on consistent keys.
+        Also extracts optional namespace_hint for per-sub-query routing.
+        """
         cleaned = raw.strip()
         if cleaned.startswith("```"):
             cleaned = cleaned.split("\n", 1)[-1]
@@ -101,7 +109,16 @@ class QueryDecomposer:
             if isinstance(result, dict) and "sub_queries" in result:
                 sub_queries = result["sub_queries"]
                 if isinstance(sub_queries, list):
-                    return [q for q in sub_queries if isinstance(q, dict) and "query" in q and "id" in q]
+                    parsed = []
+                    for i, q in enumerate(sub_queries):
+                        if isinstance(q, dict) and "query" in q:
+                            parsed.append({
+                                "id": f"Q{i + 1}",  # Normalize IDs
+                                "query": q["query"],
+                                "type": q.get("type", "FACTUAL"),
+                                "namespace_hint": q.get("namespace_hint"),
+                            })
+                    return parsed
         except (json.JSONDecodeError, ValueError):
             pass
 
