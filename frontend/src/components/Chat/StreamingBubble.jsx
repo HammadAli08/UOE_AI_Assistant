@@ -5,6 +5,9 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 function StreamingBubble({ content }) {
   const [displayed, setDisplayed] = useState('');
@@ -70,9 +73,12 @@ function StreamingBubble({ content }) {
       </div>
 
       {/* Content — flat, unboxed, with cursor */}
-      <div className="message-content text-[0.9375rem] leading-[1.7] text-cream/90 pl-8 streaming-cursor">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {displayed || content}
+      <div className="message-content text-[0.9375rem] leading-[1.7] text-cream/90 pl-8 overflow-x-auto streaming-cursor">
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+        >
+          {(displayed || content || '').replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$').replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$')}
         </ReactMarkdown>
       </div>
     </motion.div>

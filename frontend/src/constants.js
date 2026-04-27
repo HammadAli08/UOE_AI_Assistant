@@ -29,8 +29,8 @@ export const SUGGESTIONS = {
   ],
   'ms-phd': [
     'MS Botany ke lie eligibility criteria kya he?',
-    'List the compulsory courses in the first semester of the MA History program.',
-    'Retrieve the course description for "Pakistani Writings in English" (ENGL7126) from the 2022 MPhil English.',
+    'What is the pre-requisite degree for admission to the MSc Zoology program, and which subjects are mandatory?',
+    'what are semester 1 subjects in MS Computer Science',
     'What are the Course Objectives for Advanced Software Engineering?',
   ],
   'rules': [

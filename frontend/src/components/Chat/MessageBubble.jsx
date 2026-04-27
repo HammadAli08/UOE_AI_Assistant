@@ -4,6 +4,9 @@
 import { memo, useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { motion } from 'framer-motion';
 import { Copy, Check, ThumbsUp, ThumbsDown, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
@@ -88,9 +91,12 @@ function MessageBubble({ message }) {
       </div>
 
       {/* Content — no box, no border */}
-      <div className="message-content text-[0.9375rem] leading-[1.7] text-cream/90 pl-8">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {message.content}
+      <div className="message-content text-[0.9375rem] leading-[1.7] text-cream/90 pl-8 overflow-x-auto">
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+        >
+          {message.content.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$').replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$')}
         </ReactMarkdown>
       </div>
 

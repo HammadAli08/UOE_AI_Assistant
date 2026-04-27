@@ -284,25 +284,44 @@ def extract_credit_hours(text: str) -> str:
 
 
 def extract_semester(text: str) -> int:
-    """Extract semester number (0 if not found). No hard range limit."""
-    patterns = [
-        r'Semester\s*[-–—]?\s*([IVX]+)',
-        r'Semester\s*[-–—]?\s*(\d{1,2})',
-        r'(\d)(?:st|nd|rd|th)\s+Semester',
-    ]
-    for pat in patterns:
-        m = re.search(pat, text, re.IGNORECASE)
-        if m:
-            val = m.group(1).upper().strip()
-            if val in ROMAN_MAP:
-                return ROMAN_MAP[val]
-            try:
-                n = int(val)
-                if n >= 1:
-                    return n
-            except ValueError:
-                pass
-    return 0
+    """Extract first semester number (0 if not found)."""
+    all_sems = extract_all_semesters(text)
+    return all_sems[0] if all_sems else 0
+
+
+def extract_all_semesters(text: str) -> List[int]:
+    """
+    Extract ALL semester numbers from text.
+    Multi-semester pages (e.g., Sem I + II on one page) need all values
+    stored to enable precise semester-based filtering.
+    """
+    semesters: set = set()
+
+    # Roman numeral semesters: "Semester – III", "Semester-IV"
+    for m in re.finditer(r'Semester\s*[-–—]?\s*([IVX]+)', text, re.IGNORECASE):
+        val = m.group(1).upper().strip()
+        if val in ROMAN_MAP:
+            semesters.add(ROMAN_MAP[val])
+
+    # Digit semesters: "Semester 5", "Semester-2"
+    for m in re.finditer(r'Semester\s*[-–—]?\s*(\d{1,2})', text, re.IGNORECASE):
+        try:
+            n = int(m.group(1))
+            if n >= 1:
+                semesters.add(n)
+        except ValueError:
+            pass
+
+    # Ordinal: "5th Semester"
+    for m in re.finditer(r'(\d{1,2})(?:st|nd|rd|th)\s+Semester', text, re.IGNORECASE):
+        try:
+            n = int(m.group(1))
+            if n >= 1:
+                semesters.add(n)
+        except ValueError:
+            pass
+
+    return sorted(semesters)
 
 
 def detect_language(text: str) -> str:
@@ -331,17 +350,23 @@ def classify_chunk_type(text: str) -> str:
     """
     text_lower = text.lower()
 
-    # ── Course detail: has course code + title/outline ──
-    if re.search(r'course code[:\s]', text_lower) or \
-       (re.search(r'course title[:\s]', text_lower) and
-        re.search(r'(course outline|course content|specific objective|clo|course description|'
-                  r'learning outcomes|suggested readings|recommended books)', text_lower)):
-        return "course_detail"
-
     # ── Semester subject list: has "semester" + tabular course listings ──
-    if re.search(r'semester\s*[-–]?\s*[ivx\d]', text_lower) and \
-       re.search(r'(sr\.?\s*no|course code|course title|cr\.?\s*hrs?|credit)', text_lower):
+    # MUST check BEFORE course_detail — semester tables have "Course Code"
+    # as a column header which would otherwise match course_detail first.
+    if re.search(r'semester\s*[-–—]?\s*[ivx\d]', text_lower) and \
+       re.search(r'(sr\.?\s*no|course code|course title|cr\.?\s*hrs?|credit|sn\s)', text_lower):
         return "semester_subjects"
+
+    # ── Course detail: has course code + detailed content markers ──
+    # Requires a content-specific marker (outline, CLO, learning outcomes,
+    # recommended books, objectives) to distinguish from tabular listings.
+    if (re.search(r'course code[:\s]', text_lower) and
+        re.search(r'(course outline|course content|specific objective|clo|course description|'
+                  r'learning outcomes?|suggested readings?|recommended books?|'
+                  r'course objectives?)', text_lower)) or \
+       (re.search(r'course title[:\s]', text_lower) and
+        re.search(r'(course outline|course content|specific objective|clo)', text_lower)):
+        return "course_detail"
 
     # ── Admission ──
     if re.search(r'admission\s*(require|rule|criteria|eligib|procedure)', text_lower) or \
@@ -439,7 +464,8 @@ def build_chunk_metadata(
     course_code = extract_course_code(text)
     course_title = extract_course_title(text)
     credit_hours = extract_credit_hours(text)
-    semester = extract_semester(text)
+    all_semesters = extract_all_semesters(text)
+    semester = all_semesters[0] if all_semesters else 0
     language = detect_language(text)
     category = infer_category(text)
     specialization = extract_specialization(text)
@@ -475,6 +501,12 @@ def build_chunk_metadata(
         meta["credit_hours"] = credit_hours
     if semester > 0:
         meta["semester"] = semester
+    # Multi-semester support: store min/max for range-based filtering
+    if len(all_semesters) > 0:
+        meta["semester_min"] = all_semesters[0]
+        meta["semester_max"] = all_semesters[-1]
+    if len(all_semesters) > 1:
+        meta["semesters_covered"] = len(all_semesters)
     if category:
         meta["course_category"] = category
     if specialization:

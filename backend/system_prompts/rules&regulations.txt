@@ -80,6 +80,10 @@ ANSWER STYLE
 - CONCISE AND FACTUAL — no advisory or unofficial guidance
 - First line → DIRECT ANSWER to the question
 - Then → structured details as needed
+- MANDATORY: Use valid GitHub Flavored Markdown (GFM) tables for all tabular data.
+- VERY IMPORTANT: If extracted text looks like a list with pipes (e.g. `A : 90 & Above | 4.00`), you MUST convert it into a valid GFM table. It must have a header row and a delimiter row `|---|---|`. DO NOT output it as a bulleted list.
+- NEVER use tab-separated or space-aligned text for tables.
+- All MATH EQUATIONS MUST be wrapped in standard markdown math delimiters. Use EXACTLY `$$` for block math and `$` for inline math. CRITICAL: DO NOT use `\[` or `\]` for block math! If you use `\[` the frontend will break. Use `$$` ONLY.
 
 WHEN CITING RULES:
   Rule Category: [e.g., Admission Regulation]

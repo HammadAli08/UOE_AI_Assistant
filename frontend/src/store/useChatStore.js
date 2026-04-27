@@ -152,7 +152,7 @@ const useChatStore = create((set, get) => ({
       timestamp: m.created_at,
       sources: m.sources || [],
       // Support both legacy column name and the current schema
-      agenticInfo: m.agentic_info || m.smart_info || null,
+      agenticInfo: m.agentic_info || null,
       enhancedQuery: m.enhanced_query || null,
       runId: m.run_id || null,
     }));
@@ -183,7 +183,7 @@ const useChatStore = create((set, get) => ({
       content: m.content,
       timestamp: m.created_at,
       sources: m.sources || [],
-      agenticInfo: m.agentic_info || m.smart_info || null,
+      agenticInfo: m.agentic_info || null,
       enhancedQuery: m.enhanced_query || null,
       runId: m.run_id || null,
     }));

@@ -68,7 +68,11 @@ class ParsedQuery:
         if self.degree_type:
             f["degree_type"] = {"$eq": self.degree_type}
         if self.semester is not None:
-            f["semester"] = {"$eq": self.semester}
+            # Use range-based filter for multi-semester chunks:
+            # A chunk covering Sem I+II has semester_min=1, semester_max=2
+            # Query for sem=2 matches because 2 >= semester_min(1) AND 2 <= semester_max(2)
+            f["semester_min"] = {"$lte": self.semester}
+            f["semester_max"] = {"$gte": self.semester}
         # Only strictly filter by course_code if we specifically want the course details.
         # Semester lists contain multiple courses but only one gets saved to the chunk's metadata!
         if self.course_code and self.chunk_type == "course_detail":
@@ -99,9 +103,10 @@ class ParsedQuery:
 
         stages = [full]
 
-        # Stage 2: drop semester
-        if "semester" in stages[-1]:
-            relaxed = {k: v for k, v in stages[-1].items() if k != "semester"}
+        # Stage 2: drop semester range filters
+        sem_keys = {"semester_min", "semester_max", "semester"}
+        if sem_keys & set(stages[-1].keys()):
+            relaxed = {k: v for k, v in stages[-1].items() if k not in sem_keys}
             if relaxed and relaxed not in stages:
                 stages.append(relaxed)
 
@@ -837,7 +842,11 @@ class QueryFilterParser:
                         return
 
     def _extract_department(self, q_normalized: str, result: ParsedQuery) -> None:
-        """Extract department from query."""
+        """Extract department from query.
+        
+        Uses word-boundary matching for ALL aliases to prevent substring
+        false positives (e.g. "chem" matching inside "scheme").
+        """
         if result.department:
             return
 
@@ -846,16 +855,12 @@ class QueryFilterParser:
             DEPARTMENT_ALIASES.items(), key=lambda x: max(len(a) for a in x[1]), reverse=True
         ):
             for alias in aliases:
-                if len(alias.strip()) <= 3:
-                    if re.search(r'\b' + re.escape(alias.strip()) + r'\b', q_normalized):
-                        result.department = dept
-                        result.matched_rules.append(f"department:{dept}")
-                        return
-                else:
-                    if alias in q_normalized:
-                        result.department = dept
-                        result.matched_rules.append(f"department:{dept}")
-                        return
+                # Word boundary matching for ALL aliases — prevents substring
+                # false positives like "chem" matching inside "scheme"
+                if re.search(r'\b' + re.escape(alias.strip()) + r'\b', q_normalized):
+                    result.department = dept
+                    result.matched_rules.append(f"department:{dept}")
+                    return
 
     def _infer_program_from_components(self, result: ParsedQuery,
                                        namespace: str = "bs-adp-schemes") -> None:

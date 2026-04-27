@@ -86,8 +86,6 @@ SYSTEM_PROMPT_FILES = {
 }
 
 QUERY_ENHANCER_PROMPT_FILE = "query_enhancer_prompt.txt"
-SMART_GRADING_PROMPT_FILE = "smart_grading_prompt.txt"
-SMART_REWRITE_PROMPT_FILE = "smart_rewrite_prompt.txt"
 
 # =============================================================================
 # MODEL CONFIGURATION
@@ -126,13 +124,6 @@ RRF_K = int(os.getenv("RRF_K", "60"))
 # =============================================================================
 
 QUERY_ENHANCER_TIMEOUT_SECONDS = float(os.getenv("QUERY_ENHANCER_TIMEOUT_SECONDS", "5.0"))
-
-# =============================================================================
-# SMART RAG CONFIGURATION
-# =============================================================================
-
-# Model used for chunk grading and query rewriting (cheap + fast)
-SMART_RAG_CLASSIFIER_MODEL = "gpt-4o-mini"
 
 # =============================================================================
 # FEEDBACK CONFIGURATION

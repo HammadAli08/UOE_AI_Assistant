@@ -51,15 +51,9 @@ NAMESPACE 2 — MSc / MS / MPhil / PhD Programs
 CHUNK TYPE VOCABULARY (Use EXACTLY these values)
 ════════════════════════════════════════
 
-For BS/ADP namespace:
+For ALL namespaces:
   program_overview | admission | semester_subjects | course_detail |
-  field_capstone | specialization_list | allied_list |
-  program_design | general_education_list | interdisciplinary_list |
-  policy_adp | elective_tables
-
-For MSc/MS/MPhil/PhD namespace:
-  program_overview | admission | semester_subjects | course_detail |
-  elective_tables | course_list_table | program_structure | thesis_description
+  program_design | list_chunk
 
 ════════════════════════════════════════
 STEP 1 — CONTEXT RESOLUTION (CRITICAL)
@@ -123,26 +117,14 @@ ADMISSION →
 PROGRAM_OVERVIEW →
   program_overview → "program objectives vision mission introduction"
 
-DEGREE_STRUCTURE →
-  program_structure OR program_design → "credit hours program layout degree requirements"
+DEGREE_STRUCTURE / THESIS / CAPSTONE →
+  program_design → "credit hours layout degree requirements capstone project thesis"
 
-REGULATIONS →
-  (no single chunk_type) → "academic rules regulations attendance grading policies"
+REGULATIONS OR POLICY →
+  program_overview → "academic rules regulations attendance grading policies exit entry"
 
-ELECTIVES →
-  elective_tables OR course_list_table → "elective courses optional papers available list"
-
-SPECIALIZATION →
-  specialization_list → "specialization courses area list"
-
-ALLIED / INTERDISCIPLINARY →
-  allied_list → "allied interdisciplinary content courses discipline"
-
-CAPSTONE / THESIS →
-  field_capstone OR thesis_description → "capstone project thesis requirements credit hours"
-
-ADP POLICY →
-  policy_adp → "ADP exit entry credit hours CGPA pathway"
+ELECTIVES OR SPECIALIZATION OR ALLIED →
+  list_chunk → "elective specialization allied optional list courses available"
 
 ════════════════════════════════════════
 STEP 4 — QUERY BUILDING STRATEGY
@@ -201,13 +183,41 @@ Priority metadata fields (include when resolvable):
   allied_discipline   → if user asks about allied/content subject
 
 ════════════════════════════════════════
-CONVERSATION HANDLING
+CONVERSATION HANDLING (CRITICAL — ANTI-CONTAMINATION)
 ════════════════════════════════════════
 
-- Resolve pronouns using ONLY conversation history
-- Carry forward: program name, degree type, semester, year_revised
-- Never guess missing course names, codes, or years
-- If ambiguous → prefer generic safe query, minimal metadata
+RULE 1 — TOPIC SWITCH DETECTION:
+  If the current query EXPLICITLY names a DIFFERENT program, department, or degree
+  than what was discussed previously → this is a TOPIC SWITCH.
+
+  On topic switch:
+    - DROP all carried-forward context from previous turns
+    - Use ONLY the current query's program/department/degree
+    - Do NOT mix old and new programs in the same rewritten query
+    - Do NOT include the previous department name anywhere in the output
+
+  Examples of topic switches:
+    Previous: "BS Chemistry semester 1"  →  Current: "What about MPhil Education?"
+    ✅ QUERY: MPhil Education semester subjects program structure
+    ❌ QUERY: MPhil Education Chemistry semester subjects  ← CONTAMINATED!
+
+    Previous: "MSc Physics admission"  →  Current: "Tell me about PhD Botany"
+    ✅ QUERY: PhD Botany program overview introduction
+    ❌ QUERY: PhD Botany Physics admission requirements  ← CONTAMINATED!
+
+RULE 2 — CARRY FORWARD (only on follow-up, NOT topic switch):
+  Carry forward context ONLY when the current query uses pronouns or vague references
+  like "it", "this", "that", "same", "its outline", "what about semester 2":
+    - program name, degree type, semester, year_revised
+    - Never guess missing course names, codes, or years
+
+RULE 3 — SINGLE PROGRAM PER QUERY:
+  The rewritten query must reference AT MOST ONE program/department.
+  If you detect two programs → use ONLY the one from the CURRENT query.
+  If ambiguous → prefer generic safe query with minimal metadata.
+
+RULE 4 — NEVER inject department names that do NOT appear in the current query
+  unless the current query uses a pronoun that clearly refers to a previous department.
 
 ════════════════════════════════════════
 STRICT CLEANING RULES
@@ -242,8 +252,8 @@ QUERY: PHYS3112 Classical Mechanics course outline syllabus topics MSc Physics
 META: {"chunk_type": "course_detail", "course_code": "PHYS3112"}
 
 Input: "What are elective courses in MSc Zoology?"
-QUERY: elective courses optional papers list MSc Zoology course_list_table curriculum
-META: {"chunk_type": "course_list_table", "degree_type": "MSc", "program_name": "MSc Zoology", "course_category": "Elective"}
+QUERY: elective courses optional papers list MSc Zoology list_chunk curriculum
+META: {"chunk_type": "list_chunk", "degree_type": "MSc", "program_name": "MSc Zoology", "course_category": "Elective"}
 
 Input: "Semester 2 subjects in old ADP scheme"
 QUERY: Semester 2 courses subject list ADP old scheme previous curriculum
@@ -263,7 +273,7 @@ META: {"chunk_type": "course_detail", "degree_type": "BS"}
 
 Input: "Tell me about STEM Education specialization courses in B.Ed"
 QUERY: STEM Education specialization courses list Bachelor of Education BS program
-META: {"chunk_type": "specialization_list", "degree_type": "BS", "program_name": "Bachelor of Education (4 years)", "specialization_name": "STEM Education"}
+META: {"chunk_type": "list_chunk", "degree_type": "BS", "program_name": "Bachelor of Education (4 years)", "specialization_name": "STEM Education"}
 
 Input: "What about semester 2?" (after discussing MSc Physics Semester 1)
 QUERY: Semester 2 courses subject list MSc Physics program structure
@@ -271,7 +281,7 @@ META: {"chunk_type": "semester_subjects", "degree_type": "MSc", "program_name": 
 
 Input: "What are the FYP rules in BS programs?"
 QUERY: Final Year Project FYP capstone rules regulations credit hours BS degree requirements
-META: {"chunk_type": "field_capstone", "degree_type": "BS"}
+META: {"chunk_type": "program_design", "degree_type": "BS"}
 
 ════════════════════════════════════════
 FINAL PRINCIPLES

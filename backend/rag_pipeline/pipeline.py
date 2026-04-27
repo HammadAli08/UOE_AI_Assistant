@@ -2,21 +2,15 @@
 RAG Pipeline Orchestrator
 
 Main pipeline class that orchestrates all RAG components with short-term
-conversation memory, streaming, LangSmith tracing, and optional Smart RAG.
+conversation memory, streaming, LangSmith tracing, and Agentic RAG.
 
-Smart RAG (when enabled via ``enable_smart=True``):
-  1. Enhance the query, retrieve chunks from vector DB
-  2. LLM grades every chunk for relevance
-  3. If chunks are good enough → generate answer
-  4. If not → rewrite query and re-retrieve (up to 6 retries)
-  5. Accumulates ALL relevant chunks found across every iteration
-  6. Early exit when enough high-quality chunks collected
-  7. After 3 retries → answer with ALL relevant chunks collected (best-effort)
-  8. If very few chunks → detect if clarification from user would help
-  9. Only uses "sorry" fallback when literally zero chunks exist
-
-When Smart RAG is disabled the pipeline works as standard single-step RAG:
-  retrieve → generate.
+Two execution paths:
+  1. Standard RAG: retrieve → generate (single-step).
+  2. Agentic RAG (when enabled via ``enable_agentic=True``):
+     - Intent classification (DIRECT / RETRIEVE / DECOMPOSE / CLARIFY)
+     - Self-correcting retrieval loop with chunk grading and query rewriting
+     - Query decomposition for multi-topic queries
+     - Post-generation hallucination guard with three-tier grounding
 """
 
 import json
@@ -117,140 +111,6 @@ class RAGPipeline:
             return self.memory.get_history(session_id)
         return []
 
-    # ── Smart retrieval loop (best-effort) ────────────────────
-
-    @traceable(name="rag_pipeline.smart_retrieve", run_type="chain")
-    def _smart_retrieve(
-        self,
-        user_query: str,
-        enhanced_query: str,
-        pinecone_namespace: str,
-        top_k: int,
-    ) -> Dict:
-        """
-        Self-correcting retrieval with best-effort answering:
-          attempt 0  → retrieve with enhanced_query, grade chunks
-          attempt 1+ → rewrite query, retrieve again, grade again
-          After 3 retries → answer with ALL relevant chunks collected
-          If few chunks → check if user should provide more details
-          Zero chunks ever → return fallback "sorry" message
-
-        Returns dict with keys: documents, metrics, query_used, clarification
-        """
-        proc = self.smart_processor
-        max_retries = SMART_RAG_CONFIG["max_retries"]
-        boost = SMART_RAG_CONFIG["retry_top_k_boost"]
-
-        current_query = enhanced_query
-        all_relevant: List[Dict] = []  # Accumulate across ALL attempts
-        all_irrelevant: List[Dict] = []
-        total_retrievals = 0
-        total_graded = 0
-        rewrites: List[Dict] = []
-        seen_ids = set()  # Deduplicate chunks across attempts
-
-        for attempt in range(max_retries + 1):
-            # Retrieve — use more chunks on retries (progressively)
-            retrieve_k = top_k + (boost * attempt)
-            documents = self.retriever.ensemble_retrieve(
-                query=current_query, namespace=pinecone_namespace, top_k=retrieve_k,
-            )
-            total_retrievals += 1
-
-            if not documents:
-                logger.info("Smart attempt %d: zero documents retrieved", attempt)
-                if attempt < max_retries:
-                    current_query = proc.rewrite_query(user_query, all_irrelevant, attempt + 1)
-                    rewrites.append({"attempt": attempt + 1, "rewritten_query": current_query})
-                    continue
-                break
-
-            # Grade against user's original question (not enhanced/rewritten)
-            # so grading matches user intent, not search-expanded terms
-            relevant, irrelevant = proc.grade_chunks(user_query, documents)
-            total_graded += len(documents)
-
-            # Accumulate relevant chunks (deduplicate by ID)
-            for chunk in relevant:
-                chunk_id = chunk.get("id", id(chunk))
-                if chunk_id not in seen_ids:
-                    seen_ids.add(chunk_id)
-                    all_relevant.append(chunk)
-
-            all_irrelevant.extend(irrelevant)
-
-            logger.info(
-                "Smart attempt %d: retrieved=%d, relevant=%d, irrelevant=%d, "
-                "total_relevant=%d, query='%s'",
-                attempt, len(documents), len(relevant), len(irrelevant),
-                len(all_relevant), current_query[:80],
-            )
-
-            # Per-attempt quality gate: this attempt had enough high-quality chunks?
-            if not proc.should_retry(relevant, attempt):
-                logger.info(
-                    "Smart RAG: attempt %d passed quality gate "
-                    "(relevant=%d, min=%d) — stopping",
-                    attempt, len(relevant), proc.min_relevant,
-                )
-                break
-
-            # Cross-attempt check: accumulated enough high-quality chunks overall?
-            if proc.should_stop_early(all_relevant, attempt):
-                logger.info(
-                    "Smart RAG early exit: %d relevant chunks accumulated "
-                    "with sufficient quality (threshold=%d)",
-                    len(all_relevant), proc.early_success,
-                )
-                break
-
-            # Rewrite for the next attempt
-            current_query = proc.rewrite_query(user_query, irrelevant, attempt + 1)
-            rewrites.append({"attempt": attempt + 1, "rewritten_query": current_query})
-
-        # ── Post-loop: clarification detection ───────────────────────
-        clarification = None
-        if len(all_relevant) == 0:
-            # Zero chunks: check if we should ask for clarification
-            clarification = proc.detect_clarification_needed(
-                user_query, all_relevant, all_irrelevant,
-            )
-        elif len(all_relevant) < proc.min_relevant:
-            # Very few chunks: might benefit from user details
-            clarification = proc.detect_clarification_needed(
-                user_query, all_relevant, all_irrelevant,
-            )
-
-        # Best-effort: use ALL relevant chunks collected across attempts
-        # Sort by grade_confidence descending so best chunks are fed to generator first
-        all_relevant.sort(
-            key=lambda c: c.get("grade_confidence", 0.0), reverse=True,
-        )
-
-        is_best_effort = (
-            len(all_relevant) > 0
-            and len(all_relevant) < proc.min_relevant
-        )
-
-        metrics = proc.build_metrics(
-            total_retrievals=total_retrievals,
-            total_chunks_graded=total_graded,
-            query_rewrites=rewrites,
-            final_relevant_count=len(all_relevant),
-            used_fallback=len(all_relevant) == 0,
-            best_effort=is_best_effort,
-            clarification_asked=clarification is not None,
-        )
-
-        logger.info("Smart RAG metrics: %s", json.dumps(metrics))
-
-        return {
-            "documents": all_relevant,
-            "metrics": metrics,
-            "query_used": current_query,
-            "clarification": clarification,
-        }
-
     # ── NON-STREAMING QUERY ──────────────────────────────────────────
 
     @traceable(name="rag_pipeline.query", run_type="chain")
@@ -258,7 +118,6 @@ class RAGPipeline:
         self, user_query: str, namespace: str, enhance_query: bool = True,
         top_k_retrieve: int = DEFAULT_TOP_K_RETRIEVE,
         session_id: str = "",
-        enable_smart: bool = False,
         enable_agentic: bool = False,
         chat_history: Optional[List[Dict[str, str]]] = None,
     ) -> Dict:
@@ -276,12 +135,11 @@ class RAGPipeline:
                 "answer": chitchat_response, "sources": [],
                 "enhanced_query": user_query,
                 "namespace": namespace, "session_id": session_id,
-                "smart_info": None, "agentic_info": None, "run_id": None,
+                "agentic_info": None, "run_id": None,
             }
 
         # ── Query enhancement ────────────────────────────────────
         enhanced_query = user_query
-        smart_info = None
         agentic_info = None
         agentic_state = None
 
@@ -354,7 +212,6 @@ class RAGPipeline:
                     "enhanced_query": enhanced_query,
                     "namespace": namespace,
                     "session_id": session_id,
-                    "smart_info": smart_info,
                     "agentic_info": agentic_info,
                     "filter_info": filter_info,
                     "run_id": run_id,
@@ -377,7 +234,6 @@ class RAGPipeline:
                     "enhanced_query": enhanced_query,
                     "namespace": namespace,
                     "session_id": session_id,
-                    "smart_info": smart_info,
                     "agentic_info": agentic_info,
                     "filter_info": filter_info,
                     "run_id": run_id,
@@ -389,37 +245,6 @@ class RAGPipeline:
                     documents.extend(sq["all_relevant"])
             else:
                 documents = agentic_state.all_relevant
-        elif enable_smart:
-            # SMART PATH: self-correcting retrieval loop
-            smart_result = self._smart_retrieve(
-                user_query, retrieval_query, pinecone_namespace, top_k_retrieve,
-            )
-            documents = smart_result["documents"]
-            smart_info = smart_result["metrics"]
-            clarification = smart_result.get("clarification")
-
-            # Fallback only when zero chunks across all attempts
-            if not documents:
-                # Use clarification message if available, else generic fallback
-                fallback = clarification or get_smart_fallback_message()
-                if session_id:
-                    self.memory.add_turn(session_id, user_query, fallback)
-                # Capture run_id even on fallback
-                _run_id = None
-                try:
-                    _rt = get_current_run_tree()
-                    if _rt:
-                        _run_id = str(_rt.id)
-                except Exception:
-                    pass
-                return {
-                    "answer": fallback, "sources": [],
-                    "enhanced_query": enhanced_query,
-                    "namespace": namespace, "session_id": session_id,
-                    "smart_info": smart_info,
-                    "agentic_info": agentic_info,
-                    "run_id": _run_id,
-                }
         else:
             # STANDARD PATH: filter-first retrieval when filters available
             t_retrieve = time.perf_counter()
@@ -461,7 +286,6 @@ class RAGPipeline:
                 "answer": no_result, "sources": [],
                 "enhanced_query": enhanced_query,
                 "namespace": namespace, "session_id": session_id,
-                "smart_info": smart_info,
                 "agentic_info": agentic_info,
                 "filter_info": filter_info,
                 "run_id": _run_id,
@@ -531,7 +355,6 @@ class RAGPipeline:
             "answer": answer, "sources": sources,
             "enhanced_query": enhanced_query,
             "namespace": namespace, "session_id": session_id,
-            "smart_info": smart_info,
             "agentic_info": agentic_info,
             "filter_info": filter_info,
             "run_id": run_id,
@@ -544,7 +367,6 @@ class RAGPipeline:
         self, user_query: str, namespace: str, enhance_query: bool = True,
         top_k_retrieve: int = DEFAULT_TOP_K_RETRIEVE,
         session_id: str = "",
-        enable_smart: bool = False,
         enable_agentic: bool = False,
         chat_history: Optional[List[Dict[str, str]]] = None,
     ) -> Gen[Dict, None, None]:
@@ -562,14 +384,13 @@ class RAGPipeline:
                 "type": "metadata", "sources": [],
                 "enhanced_query": user_query,
                 "namespace": namespace, "session_id": session_id,
-                "smart_info": None, "agentic_info": None, "run_id": None,
+                "agentic_info": None, "run_id": None,
             }
             yield {"type": "token", "content": chitchat_response}
             return
 
         # ── Query enhancement ────────────────────────────────────
         enhanced_query = user_query
-        smart_info = None
         agentic_info = None
         agentic_state = None
 
@@ -642,7 +463,6 @@ class RAGPipeline:
                     "enhanced_query": enhanced_query,
                     "namespace": namespace,
                     "session_id": session_id,
-                    "smart_info": smart_info,
                     "agentic_info": agentic_info,
                     "filter_info": filter_info,
                     "run_id": run_id,
@@ -667,7 +487,6 @@ class RAGPipeline:
                     "enhanced_query": enhanced_query,
                     "namespace": namespace,
                     "session_id": session_id,
-                    "smart_info": smart_info,
                     "agentic_info": agentic_info,
                     "filter_info": filter_info,
                     "run_id": run_id,
@@ -681,38 +500,6 @@ class RAGPipeline:
                     documents.extend(sq["all_relevant"])
             else:
                 documents = agentic_state.all_relevant
-        elif enable_smart:
-            # SMART PATH: self-correcting retrieval loop
-            smart_result = self._smart_retrieve(
-                user_query, retrieval_query, pinecone_namespace, top_k_retrieve,
-            )
-            documents = smart_result["documents"]
-            smart_info = smart_result["metrics"]
-            clarification = smart_result.get("clarification")
-
-            # Fallback only when zero chunks
-            if not documents:
-                fallback = clarification or get_smart_fallback_message()
-                if session_id:
-                    self.memory.add_turn(session_id, user_query, fallback)
-                _run_id = None
-                try:
-                    _rt = get_current_run_tree()
-                    if _rt:
-                        _run_id = str(_rt.id)
-                except Exception:
-                    pass
-                yield {
-                    "type": "metadata", "sources": [],
-                    "enhanced_query": enhanced_query,
-                    "namespace": namespace, "session_id": session_id,
-                    "smart_info": smart_info,
-                    "agentic_info": agentic_info,
-                    "filter_info": filter_info,
-                    "run_id": _run_id,
-                }
-                yield {"type": "token", "content": fallback}
-                return
         else:
             # STANDARD PATH: filter-first retrieval when filters available
             t_retrieve = time.perf_counter()
@@ -754,7 +541,6 @@ class RAGPipeline:
                 "type": "metadata", "sources": [],
                 "enhanced_query": enhanced_query,
                 "namespace": namespace, "session_id": session_id,
-                "smart_info": smart_info,
                 "agentic_info": agentic_info,
                 "filter_info": filter_info,
                 "run_id": _run_id,
@@ -781,7 +567,6 @@ class RAGPipeline:
                 "type": "metadata", "sources": all_sources,
                 "enhanced_query": enhanced_query,
                 "namespace": namespace, "session_id": session_id,
-                "smart_info": smart_info,
                 "agentic_info": agentic_info,
                 "filter_info": filter_info,
                 "run_id": run_id,
@@ -838,7 +623,6 @@ class RAGPipeline:
                 "type": "metadata", "sources": sources,
                 "enhanced_query": enhanced_query,
                 "namespace": namespace, "session_id": session_id,
-                "smart_info": smart_info,
                 "agentic_info": agentic_info,
                 "filter_info": filter_info,
                 "run_id": run_id,
