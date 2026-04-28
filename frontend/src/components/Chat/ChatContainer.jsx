@@ -14,7 +14,7 @@ function ChatContainer({ onSuggestionClick }) {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const streamingContent = useChatStore((s) => s.streamingContent);
-  const enableAgentic = useChatStore((s) => s.settings.enableAgentic);
+  const enableSmart = useChatStore((s) => s.settings.enableSmart);
   const isLoadingConversation = useChatStore((s) => s.isLoadingConversation);
   const conversationId = useChatStore((s) => s.conversationId);
   const scrollCache = useChatStore((s) => s.scrollCache);
@@ -198,7 +198,7 @@ function ChatContainer({ onSuggestionClick }) {
           {/* Thinking animation — plays before streaming */}
           <AnimatePresence mode="wait">
             {isStreaming && !streamingContent && (
-              <ThinkingAnimation mode={enableAgentic ? 'agentic' : 'standard'} />
+              <ThinkingAnimation mode={enableSmart ? 'smart' : 'standard'} />
             )}
           </AnimatePresence>
 

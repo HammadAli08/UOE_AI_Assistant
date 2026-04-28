@@ -25,13 +25,13 @@ export const SUGGESTIONS = {
     'BS Computer Science me admisson requirement kya hain?',
     'What is Prerequisite of Compiler Construction?',
     'Bs Botany mein doosre semester mein kya subjects ho sakte hain?',
-    'What are module aims for Plant Systematics, Anatomy and Development?',
+    'What are Course Objectives of Assessment and Evaluation in B. Ed (2.5 years) post ADP?',
   ],
   'ms-phd': [
     'MS Botany ke lie eligibility criteria kya he?',
     'What is the pre-requisite degree for admission to the MSc Zoology program, and which subjects are mandatory?',
-    'what are semester 1 subjects in MS Computer Science',
-    'What are the Course Objectives for Advanced Software Engineering?',
+    'What are semester 1 subjects in MS Computer Science',
+    'What subjects are there in semester 1 of MS Zoology',
   ],
   'rules': [
     'What is the Hostel guest policy?',

@@ -6,7 +6,7 @@ Constants for the agentic retrieval system with autonomous decision-making.
 Extends the self-correcting retrieval loop and adds:
   - Intent classification (DIRECT / RETRIEVE / DECOMPOSE / CLARIFY)
   - Query decomposition for multi-part questions
-  - Post-generation hallucination guard (three-tier: grounded / partial / ungrounded)
+  - Post-generation hallucination guard
 """
 
 AGENTIC_RAG_CONFIG = {
@@ -36,17 +36,11 @@ AGENTIC_RAG_CONFIG = {
     "decomposer_temperature": 0.0,
     "decomposer_max_tokens": 300,
 
-    # ── Hallucination guard (three-tier aligned with prompt) ─────────
-    # score >= grounded_threshold      → pass answer as-is
-    # partial_threshold <= score < grounded_threshold → soft warning
-    # score < partial_threshold        → strong disclaimer
-    "hallucination_threshold": 0.75,        # "grounded" tier floor
-    "hallucination_partial_threshold": 0.40, # "partial" tier floor
+    # ── Hallucination guard ──────────────────────────────────────────
+    "hallucination_threshold": 0.5,     # below this → flag or regenerate
     "hallucination_temperature": 0.0,
     "hallucination_max_tokens": 200,
-
-    # ── LLM call timeout (seconds) ──────────────────────────────────
-    "llm_timeout": 15,
+    "max_hallucination_retries": 1,     # regenerate once if ungrounded
 
 }
 

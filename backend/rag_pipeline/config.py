@@ -10,16 +10,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# =============================================================================
-# API KEYS
-# =============================================================================
-
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-
-# =============================================================================
-# LANGSMITH TRACING
-# =============================================================================
 
 _tracing_raw = os.getenv("LANGSMITH_TRACING") or os.getenv("LANGCHAIN_TRACING_V2") or os.getenv("LANGCHAIN_TRACING") or "false"
 LANGSMITH_TRACING_ENABLED = _tracing_raw.lower() == "true"
@@ -38,20 +30,12 @@ if LANGSMITH_TRACING_ENABLED and LANGSMITH_API_KEY:
     os.environ["LANGSMITH_ENDPOINT"] = LANGSMITH_ENDPOINT
     os.environ["LANGCHAIN_ENDPOINT"] = LANGSMITH_ENDPOINT
 
-# =============================================================================
-# REDIS CONFIGURATION (Short-Term Memory — Redis Cloud)
-# =============================================================================
-
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_USERNAME = os.getenv("REDIS_USERNAME", "default")
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
 MEMORY_MAX_TURNS = int(os.getenv("MEMORY_MAX_TURNS", "10"))
 MEMORY_TTL_SECONDS = int(os.getenv("MEMORY_TTL_SECONDS", "1800"))
-
-# =============================================================================
-# PINECONE CONFIGURATION
-# =============================================================================
 
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "uoeaiassistant")
 
@@ -65,16 +49,10 @@ NAMESPACE_MAP = {
 
 VALID_NAMESPACES = list(NAMESPACE_MAP.keys())
 
-# Namespaces where metadata filter parsing is active
-# Only namespaces with structured metadata benefit from filter-first retrieval
 FILTER_ENABLED_NAMESPACES = [
     "bs-adp-schemes",
     "ms-phd-schemes",
 ]
-
-# =============================================================================
-# SYSTEM PROMPTS
-# =============================================================================
 
 SYSTEM_PROMPTS_DIR = Path(__file__).parent.parent / "system_prompts"
 
@@ -87,30 +65,17 @@ SYSTEM_PROMPT_FILES = {
 
 QUERY_ENHANCER_PROMPT_FILE = "query_enhancer_prompt.txt"
 
-# =============================================================================
-# MODEL CONFIGURATION
-# =============================================================================
-
-# Pinecone index `uoeaiassistant` uses 3072-d vectors created with text-embedding-3-large.
-# Keep defaults aligned to avoid dimension mismatches at query time.
 OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
 OPENAI_EMBEDDING_DIMENSIONS = int(os.getenv("OPENAI_EMBEDDING_DIMENSIONS", "3072"))
 OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
 OPENAI_CHAT_TEMPERATURE = float(os.getenv("OPENAI_CHAT_TEMPERATURE", "0.1"))
 OPENAI_CHAT_MAX_TOKENS = int(os.getenv("OPENAI_CHAT_MAX_TOKENS", "1500"))
 
-# =============================================================================
-# RETRIEVAL CONFIGURATION
-# =============================================================================
 
 DEFAULT_TOP_K_RETRIEVE = int(os.getenv("DEFAULT_TOP_K_RETRIEVE", "5"))
 CACHE_MAX_ENTRIES = int(os.getenv("CACHE_MAX_ENTRIES", "512"))
 EMBEDDING_CACHE_TTL_SECONDS = float(os.getenv("EMBEDDING_CACHE_TTL_SECONDS", "3600"))
 RETRIEVAL_CACHE_TTL_SECONDS = float(os.getenv("RETRIEVAL_CACHE_TTL_SECONDS", "45"))
-
-# =============================================================================
-# ENSEMBLE RETRIEVER CONFIGURATION
-# =============================================================================
 
 ENSEMBLE_ENABLED = os.getenv("ENSEMBLE_ENABLED", "true").lower() == "true"
 ENSEMBLE_DENSE_WEIGHT = float(os.getenv("ENSEMBLE_DENSE_WEIGHT", "0.7"))
@@ -119,14 +84,6 @@ ENSEMBLE_OVERFETCH_MULTIPLIER = int(os.getenv("ENSEMBLE_OVERFETCH_MULTIPLIER", "
 ENSEMBLE_MAX_CANDIDATES = int(os.getenv("ENSEMBLE_MAX_CANDIDATES", "30"))
 RRF_K = int(os.getenv("RRF_K", "60"))
 
-# =============================================================================
-# TIMEOUTS
-# =============================================================================
-
 QUERY_ENHANCER_TIMEOUT_SECONDS = float(os.getenv("QUERY_ENHANCER_TIMEOUT_SECONDS", "5.0"))
-
-# =============================================================================
-# FEEDBACK CONFIGURATION
-# =============================================================================
 
 FEEDBACK_LOG_PATH = Path(__file__).parent.parent / "feedback_log.jsonl"
