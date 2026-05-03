@@ -23,7 +23,7 @@ export const DEFAULT_NAMESPACE = 'about';
 export const SUGGESTIONS = {
   'bs-adp': [
     'BS Computer Science me admisson requirement kya hain?',
-    'What is Prerequisite of Compiler Construction?',
+    'what is prerequisit of Parallel & Distributed Computing?',
     'Bs Botany mein doosre semester mein kya subjects ho sakte hain?',
     'What are Course Objectives of Assessment and Evaluation in B. Ed (2.5 years) post ADP?',
   ],

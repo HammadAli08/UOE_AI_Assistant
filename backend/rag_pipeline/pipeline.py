@@ -36,8 +36,6 @@ from .query_enhancer import get_query_enhancer
 from .retriever import get_retriever
 from .generator import get_generator
 from .memory import get_memory
-from .query_filter_parser import get_query_filter_parser
-from .config import FILTER_ENABLED_NAMESPACES
 from .agentic_rag import AgentState, get_agentic_graph
 
 logger = logging.getLogger(__name__)
@@ -74,7 +72,6 @@ class RAGPipeline:
         self.retriever = get_retriever()
         self.generator = get_generator()
         self.memory = get_memory()
-        self.filter_parser = get_query_filter_parser()   # ← add this
         self.agentic_graph = get_agentic_graph(
             self.retriever, self.generator, self.query_enhancer
         )
@@ -357,21 +354,11 @@ class RAGPipeline:
                     "run_id": _run_id,
                 }
         else:
+            # STANDARD PATH: single retrieval (ensemble: dense + BM25 via RRF)
             t_retrieve = time.perf_counter()
-            if pinecone_namespace in FILTER_ENABLED_NAMESPACES:
-                parsed = self.filter_parser.parse(retrieval_query, namespace=pinecone_namespace)
-                filter_stages = parsed.relaxed_filters()
-                logger.info("🔍 filter_parser: %r stages=%d", parsed, len(filter_stages))
-                documents, _filter_used, _quality = self.retriever.filtered_retrieve(
-                    query=retrieval_query,
-                    namespace=pinecone_namespace,
-                    filter_stages=filter_stages,
-                    top_k=top_k_retrieve,
-                )
-            else:
-                documents = self.retriever.ensemble_retrieve(
-                    query=retrieval_query, namespace=pinecone_namespace, top_k=top_k_retrieve,
-                )
+            documents = self.retriever.ensemble_retrieve(
+                query=retrieval_query, namespace=pinecone_namespace, top_k=top_k_retrieve,
+            )
             logger.info("⏱ retrieve: %.2fs  (docs=%d)", time.perf_counter() - t_retrieve, len(documents))
 
         if not documents:
@@ -568,21 +555,11 @@ class RAGPipeline:
                 yield {"type": "token", "content": fallback}
                 return
         else:
+            # STANDARD PATH: single retrieval (ensemble: dense + BM25 via RRF)
             t_retrieve = time.perf_counter()
-            if pinecone_namespace in FILTER_ENABLED_NAMESPACES:
-                parsed = self.filter_parser.parse(retrieval_query, namespace=pinecone_namespace)
-                filter_stages = parsed.relaxed_filters()
-                logger.info("🔍 filter_parser: %r stages=%d", parsed, len(filter_stages))
-                documents, _filter_used, _quality = self.retriever.filtered_retrieve(
-                    query=retrieval_query,
-                    namespace=pinecone_namespace,
-                    filter_stages=filter_stages,
-                    top_k=top_k_retrieve,
-                )
-            else:
-                documents = self.retriever.ensemble_retrieve(
-                    query=retrieval_query, namespace=pinecone_namespace, top_k=top_k_retrieve,
-                )
+            documents = self.retriever.ensemble_retrieve(
+                query=retrieval_query, namespace=pinecone_namespace, top_k=top_k_retrieve,
+            )
             logger.info("⏱ retrieve: %.2fs  (docs=%d)", time.perf_counter() - t_retrieve, len(documents))
 
         if not documents:
