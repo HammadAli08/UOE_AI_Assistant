@@ -60,6 +60,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['**/about_us_background.png', '**/knowledge_base_background.png'],
         navigateFallback: '/index.html',
         navigateFallbackAllowlist: [/^\/(?!api|health)/],
         runtimeCaching: [
@@ -98,6 +99,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    reportCompressedSize: false,
     minify: 'terser',
     // Warn on chunks > 500KB
     chunkSizeWarningLimit: 500,
@@ -117,9 +119,9 @@ export default defineConfig({
           if (id.includes('node_modules/framer-motion')) {
             return 'framer-motion';
           }
-          // Markdown rendering — chat only (~160KB)
-          if (id.includes('node_modules/react-markdown') || id.includes('node_modules/remark') || id.includes('node_modules/rehype') || id.includes('node_modules/micromark') || id.includes('node_modules/mdast') || id.includes('node_modules/hast')) {
-            return 'markdown';
+          // KaTeX ships fonts and CSS-heavy rendering logic
+          if (id.includes('node_modules/katex')) {
+            return 'katex';
           }
           // Supabase — auth & persistence (~160KB)
           if (id.includes('node_modules/@supabase')) {
