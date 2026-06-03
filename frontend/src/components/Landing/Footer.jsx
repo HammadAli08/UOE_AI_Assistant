@@ -2,11 +2,12 @@
 // Footer — minimal dark footer with hover animations
 // ──────────────────────────────────────────
 import { memo } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const navLinks = [
-  { label: 'Features', href: '#features' },
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Knowledge Bases', href: '#knowledge-bases' },
+  { label: 'Home', href: '/' },
+  { label: 'Explorer', href: '/knowledge-bases' },
+  { label: 'About Us', href: '/about' },
 ];
 
 const techLinks = [
@@ -18,8 +19,11 @@ const techLinks = [
 ];
 
 function Footer() {
-  const scrollTo = (href) => {
-    document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
+  const navigate = useNavigate();
+
+  const handleNav = (href) => {
+    navigate(href);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -47,7 +51,7 @@ function Footer() {
               {navLinks.map((link) => (
                 <li key={link.href}>
                   <button
-                    onClick={() => scrollTo(link.href)}
+                    onClick={() => handleNav(link.href)}
                     className="footer-link text-sm text-ash hover:text-cream transition-colors duration-300"
                   >
                     {link.label}

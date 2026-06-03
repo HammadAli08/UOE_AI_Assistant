@@ -90,7 +90,7 @@ function NamespaceCard({ ns, index }) {
                 Popular Questions
               </p>
               <ul className="space-y-3">
-                {(SUGGESTIONS[ns.id] || []).slice(0, 3).map((q) => (
+                {(SUGGESTIONS[ns.id] || []).map((q) => (
                   <li
                     key={q}
                     className="text-xs leading-relaxed pl-4"

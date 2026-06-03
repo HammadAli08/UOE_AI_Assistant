@@ -2,7 +2,7 @@
 // App — root component with routing
 // ──────────────────────────────────────────
 import { useCallback, useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, LogIn, User, Database } from 'lucide-react';
 import useChatStore from '@/store/useChatStore';
 import useAuthStore from '@/store/useAuthStore';
@@ -138,6 +138,37 @@ function ChatPage() {
   );
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    // 1. Direct immediate scroll reset
+    if (document.body) document.body.scrollTop = 0;
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    window.scrollTo(0, 0);
+
+    // 2. Multi-stage delayed resets to cover lazy rendering, component mounting, and overflow toggles
+    const delays = [0, 40, 80, 150, 250];
+    const timers = delays.map(delay => 
+      setTimeout(() => {
+        if (document.body) {
+          document.body.scrollTop = 0;
+          document.body.scrollTo(0, 0);
+        }
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+          document.documentElement.scrollTo(0, 0);
+        }
+        window.scrollTo(0, 0);
+      }, delay)
+    );
+
+    return () => timers.forEach(clearTimeout);
+  }, [pathname]);
+
+  return null;
+}
+
 /* ── App root with routes ── */
 export default function App() {
   // Poll backend health every 30 s
@@ -150,6 +181,7 @@ export default function App() {
 
   return (
     <Suspense fallback={<PageLoader />}>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<HeroPage />} />
         <Route path="/chat" element={<ChatPage />} />

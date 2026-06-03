@@ -1,30 +1,3 @@
-"""
-canonical_bs_adp_ingestion.py
-=============================================================================
-Production-grade PDF ingestion pipeline for BS & ADP Scheme of Studies.
-
-SOURCE:  68 PDF files in Data/BS&ADP/
-TARGET:  Pinecone index `uoeaiassistant`, namespace `bs-adp-schemes`
-EMBED:   OpenAI text-embedding-3-large (dim=3072)
-
-ARCHITECTURE:
-  1. Load each PDF via PyPDFLoader
-  2. Apply course-boundary-aware semantic chunking
-  3. Extract rich metadata per chunk (program, degree, semester, course, etc.)
-  4. Normalize chunk_type to 6 canonical types
-  5. Construct embedding text with metadata header
-  6. Generate deterministic vector IDs
-  7. Strip null metadata values (Pinecone rejects null)
-  8. Embed in batches via OpenAI
-  9. Upsert in batches to Pinecone
-
-USAGE:
-    python canonical_bs_adp_ingestion.py               # Full ingestion
-    python canonical_bs_adp_ingestion.py --dry-run      # Parse + validate only
-    python canonical_bs_adp_ingestion.py --resume       # Skip already processed
-=============================================================================
-"""
-
 import os
 import re
 import sys
@@ -41,7 +14,7 @@ from collections import defaultdict
 from dotenv import load_dotenv
 
 # ─── Load .env ───────────────────────────────────────────────────────────────
-_backend_dir = Path("/mnt/data/hammadali08/PycharmProjects/UOE_AI_ASSISTANT/backend")
+_backend_dir = Path(__file__).resolve().parent.parent
 load_dotenv(_backend_dir / ".env")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -56,10 +29,7 @@ OPENAI_MODEL     = "text-embedding-3-large"
 EMBED_BATCH      = 20        # texts per OpenAI call
 UPSERT_BATCH     = 100       # vectors per Pinecone upsert
 
-DATA_DIR = Path(
-    "/mnt/data/hammadali08/PycharmProjects/UOE_AI_ASSISTANT"
-    "/backend/Data/BS&ADP/old_schemes"
-)
+DATA_DIR = _backend_dir / "Data" / "BS&ADP" / "old_schemes"
 
 LOG_FILE = _backend_dir / "Data_Ingestion" / "legacy_ingestion.log"
 PROGRESS_FILE = _backend_dir / "Data_Ingestion" / "legacy_ingestion_progress.json"
@@ -264,25 +234,44 @@ def extract_credit_hours(text: str) -> str:
 
 
 def extract_semester(text: str) -> int:
-    """Extract semester number (0 if not found)."""
-    patterns = [
-        r'Semester\s*[-–—]?\s*([IVX]+)',
-        r'Semester\s*[-–—]?\s*(\d{1,2})',
-        r'(\d)(?:st|nd|rd|th)\s+Semester',
-    ]
-    for pat in patterns:
-        m = re.search(pat, text, re.IGNORECASE)
-        if m:
-            val = m.group(1).upper().strip()
-            if val in ROMAN_MAP:
-                return ROMAN_MAP[val]
-            try:
-                n = int(val)
-                if 1 <= n <= 12:
-                    return n
-            except ValueError:
-                pass
-    return 0
+    """Extract first semester number (0 if not found)."""
+    all_sems = extract_all_semesters(text)
+    return all_sems[0] if all_sems else 0
+
+
+def extract_all_semesters(text: str) -> List[int]:
+    """
+    Extract ALL semester numbers from text.
+    Multi-semester pages (e.g., Sem I + II on one page) need all values
+    stored to enable precise semester-based filtering.
+    """
+    semesters: set = set()
+
+    # Roman numeral semesters: "Semester – III", "Semester-IV"
+    for m in re.finditer(r'Semester\s*[-–—]?\s*([IVX]+)', text, re.IGNORECASE):
+        val = m.group(1).upper().strip()
+        if val in ROMAN_MAP:
+            semesters.add(ROMAN_MAP[val])
+
+    # Digit semesters: "Semester 5", "Semester-2"
+    for m in re.finditer(r'Semester\s*[-–—]?\s*(\d{1,2})', text, re.IGNORECASE):
+        try:
+            n = int(m.group(1))
+            if 1 <= n <= 12:
+                semesters.add(n)
+        except ValueError:
+            pass
+
+    # Ordinal: "5th Semester"
+    for m in re.finditer(r'(\d{1,2})(?:st|nd|rd|th)\s+Semester', text, re.IGNORECASE):
+        try:
+            n = int(m.group(1))
+            if 1 <= n <= 12:
+                semesters.add(n)
+        except ValueError:
+            pass
+
+    return sorted(semesters)
 
 
 def detect_language(text: str) -> str:
@@ -384,7 +373,8 @@ def build_chunk_metadata(
     course_code = extract_course_code(text)
     course_title = extract_course_title(text)
     credit_hours = extract_credit_hours(text)
-    semester = extract_semester(text)
+    all_semesters = extract_all_semesters(text)
+    semester = all_semesters[0] if all_semesters else 0
     language = detect_language(text)
     category = infer_category(text)
 
@@ -422,6 +412,11 @@ def build_chunk_metadata(
         meta["credit_hours"] = credit_hours
     if semester > 0:
         meta["semester"] = semester
+    if len(all_semesters) > 0:
+        meta["semester_min"] = all_semesters[0]
+        meta["semester_max"] = all_semesters[-1]
+    if len(all_semesters) > 1:
+        meta["semesters_covered"] = len(all_semesters)
     if category:
         meta["category"] = category
 

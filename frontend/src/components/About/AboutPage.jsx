@@ -286,29 +286,19 @@ function AboutPage() {
 
           <ScrollReveal index={0}>
             <p className="text-base leading-[1.9] text-[#8A95A8] mb-8 font-light">
-              We started with a lot of ideas — projects involving AI, RAG pipelines, and chatbots — 
-              but we wanted to build something that truly solved a problem for our own university. 
-              It was Ahmad Nawaz who first sparked the idea of a platform around university admissions 
-              and policies.
+              Our journey began with a flood of ideas, ranging from ambitious AI projects to advanced RAG pipelines and chatbots. Yet, deep down, we yearned to create something that would truly make a difference for our own home university. It was Ahmad Nawaz who first lit the spark, proposing a platform to guide students through the complex maze of university admissions and academic policies.
             </p>
           </ScrollReveal>
 
           <ScrollReveal index={1}>
             <p className="text-base leading-[1.9] text-[#8A95A8] mb-8 font-light">
-              That spark led Hammad Ali Tahir to sharpen the vision: instead of trying to serve all 
-              universities in Pakistan, why not go deep on just one? The University of Education website 
-              had dozens of schemes of studies, rules, regulations, and program details — all buried in 
-              PDFs that students rarely opened. So we asked ourselves: what if a student could just ask 
-              a simple question in plain English — or even Roman Urdu — and get the answer instantly?
+              That initial spark inspired Hammad Ali Tahir to refine our vision. Instead of scattering our efforts to serve every university in Pakistan, we chose to pour our hearts into just one, dedicating ourselves to its students. The University of Education website was filled with critical schemes of studies, rules, regulations, and program details, but they were all locked away in heavy PDFs that students rarely opened. We asked ourselves a simple, life-changing question: what if a student could ask a simple question in plain English or even their native Roman Urdu and receive an accurate answer in the blink of an eye?
             </p>
           </ScrollReveal>
 
           <ScrollReveal index={2}>
             <p className="text-base leading-[1.9] text-[#8A95A8] mb-8 font-light">
-              What courses are in my semester? What topics will I study in a subject? What is the 
-              policy for migrating from one campus to another? This information existed — it was just 
-              inaccessible. We built UOE AI to change that. This is our contribution to our university, 
-              our department, and our generation.
+              What courses will I take this semester? What exact topics will I study in my favorite subject? What is the real policy for migrating from one campus to another? This vital information already existed, but it was virtually invisible. We built UOE AI to break down those barriers and bring clarity to every student. This is our humble gift and our lasting contribution to our university, our department, and our generation.
             </p>
           </ScrollReveal>
 

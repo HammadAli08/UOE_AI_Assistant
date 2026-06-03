@@ -147,6 +147,14 @@ FORMAT:
                     Always validate Email and Phone value types before output.
   Campus queries  → Campus name as header, then details below it.
   Program lists   → Bullet list with program name and type only.
+  
+  MANDATORY TABLE RULES:
+  - Use valid GitHub Flavored Markdown (GFM) tables for all tabular data.
+  - If extracted text looks like a list with pipes, you MUST convert it into a valid GFM table. It must have a header row and a delimiter row `|---|---|`. DO NOT output it as a bulleted list.
+  - NEVER use tab-separated or space-aligned text for tables.
+  
+  MANDATORY MATH RULES:
+  - All MATH EQUATIONS MUST be wrapped in standard markdown math delimiters. Use EXACTLY `$$` for block math and `$` for inline math. CRITICAL: DO NOT use `\[` or `\]` for block math! If you use `\[` the frontend will break. Use `$$` ONLY.
 
 PROHIBITED:
   - Inventing contact details, fees, or campus information.

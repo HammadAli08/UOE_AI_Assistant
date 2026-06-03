@@ -19,6 +19,7 @@ from .intent_classifier import IntentClassifier, get_intent_classifier
 from .query_decomposer import QueryDecomposer, get_query_decomposer
 from .hallucination_guard import HallucinationGuard, get_hallucination_guard
 from .graph import AgenticRAGGraph, get_agentic_graph
+from .utils import apply_grounding_disclaimer
 
 __all__ = [
     "AGENTIC_RAG_CONFIG",
@@ -27,6 +28,7 @@ __all__ = [
     "QueryDecomposer",
     "HallucinationGuard",
     "AgenticRAGGraph",
+    "apply_grounding_disclaimer",
     "get_intent_classifier",
     "get_query_decomposer",
     "get_hallucination_guard",
