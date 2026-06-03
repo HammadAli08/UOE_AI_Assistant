@@ -1,163 +1,207 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="frontend/public/unnamed.jpg">
-    <img src="frontend/public/unnamed.jpg" alt="UOE AI Assistant" width="160" />
-  </picture>
-</p>
+# UOE AI Assistant
 
-<h1 align="center">🎓 UOE AI Assistant</h1>
+An AI assistant for the University of Education, Lahore, built with a FastAPI backend, a React/Vite frontend, and a retrieval-augmented generation pipeline over university knowledge sources.
 
-<p align="center">
-  <strong>The Intelligent Knowledge Gateway for the University of Education, Lahore</strong>
-</p>
+The assistant answers student and staff questions about programs, course schemes, rules, regulations, fees, contacts, and general university information. It uses OpenAI models for generation and embeddings, Pinecone for vector search, Redis for short-term conversation memory, and optional LangSmith tracing for evaluation and feedback.
 
-<p align="center">
-  <em>A state-of-the-art Agentic RAG system engineered for academic precision, conversational depth, and zero-hallucination reliability.</em>
-</p>
+![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Pinecone](https://img.shields.io/badge/Pinecone-Vector_DB-00B388?style=flat-square)
+![OpenAI](https://img.shields.io/badge/OpenAI-RAG-412991?style=flat-square&logo=openai&logoColor=white)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=white" />
-  <img src="https://img.shields.io/badge/FastAPI-Framework-009688?style=flat-square&logo=fastapi&logoColor=white" />
-  <img src="https://img.shields.io/badge/OpenAI-GPT--4o-412991?style=flat-square&logo=openai&logoColor=white" />
-  <img src="https://img.shields.io/badge/Pinecone-VDB-00B388?style=flat-square&logo=pinecone&logoColor=white" />
-  <img src="https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=flat-square&logo=supabase&logoColor=white" />
-</p>
+## What It Does
 
-<div align="center">
-  <a href="#-core-architecture">Architecture</a> •
-  <a href="#-technical-features">Features</a> •
-  <a href="#-knowledge-ecosystem">Knowledge Base</a> •
-  <a href="#-installation">Setup</a> •
-  <a href="#-development-team">The Team</a>
-</div>
+- Answers questions from four university knowledge areas: BS/ADP schemes, MS/PhD schemes, rules and regulations, and general university information.
+- Streams chat responses to the frontend with Server-Sent Events.
+- Enhances user queries before retrieval so short, informal, or Roman Urdu questions can still map to the right content.
+- Supports an optional agentic RAG mode with intent routing, query decomposition, retrieval retries, and grounding checks.
+- Supports voice input through transcription, transliteration, and query normalization.
+- Stores short-term session memory in Redis.
+- Captures user feedback and can link it to LangSmith traces when tracing is enabled.
 
----
-
-## ⚡ Overview
-
-The **UOE AI Assistant** represents a leap forward in institutional AI. Moving beyond simple chatbots, it implements an **Agentic Retrieval-Augmented Generation (RAG)** pipeline specifically tuned for university data—from course outlines to hostel regulations. It doesn't just "guess" answers; it searches, verifies, and cites official university documents with sub-second latency.
-
----
-
-## 🏗️ Core Architecture
-
-The system operates on an **Agentic Graph** that orchestrates intent, retrieval, and validation in a closed-loop system.
+## Architecture
 
 ```mermaid
-graph TD
-    subgraph "The Frontend (Client)"
-        UI[Glassmorphic React UI] --> SSE[Server-Sent Events]
-    end
-
-    subgraph "The Brain (FastAPI Orchestrator)"
-        Logic[Agentic RAG Engine]
-        Enhancer[Conversational Query Refiner]
-        Guard[Hallucination Safety Gate]
-    end
-
-    subgraph "The Memory (Vector & Database)"
-        P[(Pinecone Vector Index)]
-        R[(Redis Context Store)]
-        S[(Supabase Auth & Data)]
-    end
-
-    UI <--> Enhancer
-    Enhancer --> Logic
-    Logic <--> P
-    Logic --> Guard
-    Guard --> SSE
-    Enhancer <--> R
-    UI <--> S
+flowchart LR
+    User["User"] --> Frontend["React + Vite frontend"]
+    Frontend -->|"REST / SSE"| API["FastAPI backend"]
+    API --> Pipeline["RAG pipeline"]
+    Pipeline --> Enhancer["Query enhancer"]
+    Pipeline --> Retriever["Retriever"]
+    Pipeline --> Generator["Answer generator"]
+    Pipeline --> Agentic["Agentic RAG tools"]
+    Retriever --> Pinecone["Pinecone vector index"]
+    Pipeline --> Redis["Redis session memory"]
+    API --> LangSmith["LangSmith feedback/tracing"]
+    Generator --> OpenAI["OpenAI chat models"]
+    Enhancer --> OpenAI
+    Retriever --> OpenAIEmbeddings["OpenAI embeddings"]
 ```
 
----
+## Knowledge Namespaces
 
-## 🔥 Technical Features
+| UI namespace | Pinecone namespace | Purpose |
+| --- | --- | --- |
+| `bs-adp` | `bs-adp-schemes` | BS and ADP programs, course outlines, prerequisites, and semesters |
+| `ms-phd` | `ms-phd-schemes` | MS, MPhil, and PhD program information |
+| `rules` | `rules-regulations` | Policies, grading, attendance, hostel rules, UMC, and other regulations |
+| `about` | `about-university` | University overview, campuses, contacts, fees, services, and general information |
 
-### 🧠 Agentic Intent Routing
-The assistant autonomously classifies student queries into distinct domains (Academic, General, or Policies), ensuring the retrieval engine targets the correct data namespace with 100% precision.
+## Repository Layout
 
-### 🛡️ Hallucination-Free Assurance
-Equipped with a **Three-Stage Grounding Guard**:
-- **Grounded**: Every claim is tied to a specific chunk ID in the retrieved documents.
-- **Self-Correction**: If the initial retrieval is insufficient, the agent re-decomposes the query and tries again.
-- **Zero-Trust**: Responses that cannot be verified against the university's source truth are blocked and replaced with a clarifying fallback.
+```text
+.
+|-- backend/
+|   |-- main.py                         # FastAPI app and API endpoints
+|   |-- rag_pipeline/                   # Retrieval, generation, memory, and query enhancement
+|   |-- rag_pipeline/agentic_rag/       # Intent routing, rewriting, grading, and grounding tools
+|   |-- Data_Ingestion/                 # Pinecone ingestion scripts
+|   |-- system_prompts/                 # Prompt files used by the RAG pipeline
+|   |-- evaluation/                     # Evaluation dataset and RAGAS scripts
+|   |-- pyproject.toml                  # Backend dependencies
+|   `-- uv.lock                         # Locked Python dependency graph
+|-- frontend/
+|   |-- src/                            # React app
+|   |-- public/                         # Static images and icons
+|   |-- package.json                    # Frontend scripts and dependencies
+|   `-- vite.config.js                  # Vite configuration
+|-- render.yaml                         # Render deployment configuration
+|-- supabase_schema.sql                 # Supabase schema reference
+`-- README.md
+```
 
-### 🎯 Hybrid Semantic-Filter Search
-We combine the "vibe" of semantic search with the "rigor" of SQL-style filtering:
-- **Neural Search**: Uses `text-embedding-3-large` for deep conceptual understanding.
-- **Metadata Enforcer**: Automatically parses course codes (e.g., `COMP3149`) and program names to apply hard Pinecone filters, eliminating noise from irrelevant departments.
+## Requirements
 
-### 🎤 Unified Voice Intelligence
-A premium voice pipeline that supports local dialects:
-- **Whisper Integration**: High-accuracy STT.
-- **Transliterator**: Converts Urdu/Hindi voice inputs into clean Roman Urdu/English for the RAG engine.
-- **Normalizer**: Fixes stuttering and semantic drift before the query hits the vector store.
+- Python 3.12 or newer
+- Node.js 22.x
+- Redis, local or hosted
+- Pinecone index compatible with `text-embedding-3-large` vectors
+- OpenAI API key
+- Optional: LangSmith API key for tracing and feedback
 
----
+## Backend Setup
 
-## 📁 Knowledge Ecosystem
+From the repository root:
 
-The system is powered by over **28,800 semantic nodes** indexed into four high-performance namespaces:
-
-| Namespace | Focus Area | Source Depth |
-| :--- | :--- | :--- |
-| **`bs-adp-schemes`** | Undergraduate Academics | 160+ Full Course Outlines |
-| **`ms-phd-schemes`** | Graduate Research | 21+ Advanced Program Files |
-| **`rules-regulations`** | University Statutes | Grading, Attendance, UMC Codes |
-| **`about-university`** | General Info | Fees, Contacts, Administrative Structure |
-
----
-
-## 🚀 Installation
-
-### 1. Backend Engine
-Ensure you have Python 3.12+ and a Redis instance running.
 ```bash
-git clone https://github.com/HammadAli08/UOE_AI_Assistant.git
 cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python main.py
+uv sync
 ```
 
-### 2. Frontend Interface
-Built with Vite for near-instant HMR.
+Create `backend/.env`:
+
+```env
+OPENAI_API_KEY=your_openai_key
+PINECONE_API_KEY=your_pinecone_key
+PINECONE_INDEX_NAME=uoeaiassistant
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_USERNAME=default
+REDIS_PASSWORD=
+
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+OPENAI_EMBEDDING_DIMENSIONS=3072
+OPENAI_CHAT_MODEL=gpt-4o-mini
+
+LANGSMITH_TRACING=false
+LANGSMITH_API_KEY=
+LANGSMITH_PROJECT=uoe-ai-assistant
+```
+
+Run the API:
+
+```bash
+uv run python main.py
+```
+
+The backend starts on `http://localhost:8000` by default. Set `PORT` to run it on another port.
+
+## Frontend Setup
+
+From the repository root:
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
----
+The frontend runs on the Vite dev server, usually `http://localhost:5173`.
 
-## 👨‍💻 Development Team
+For local development, the app can call `/api` through the Vite proxy. For production, set:
 
-This project was developed with absolute dedication at the **University of Education, Lahore**.
+```env
+VITE_API_URL=https://your-backend-domain.com/api
+```
 
-<table align="center">
-  <tr>
-    <td align="center">
-      <img src="frontend/public/Hammad Ali.png" width="100" style="border-radius: 50%" /><br />
-      <strong>Hammad Ali Tahir</strong><br />
-      <em>Group Leader & Architect</em>
-    </td>
-    <td align="center">
-      <img src="frontend/public/Muhammad Muzaib.png" width="100" style="border-radius: 50%" /><br />
-      <strong>Muhammad Muzaib</strong><br />
-      <em>Backend Strategist</em>
-    </td>
-    <td align="center">
-      <img src="frontend/public/Ahmad Nawaz.png" width="100" style="border-radius: 50%" /><br />
-      <strong>Ahmad Nawaz</strong><br />
-      <em>Frontend Specialist</em>
-    </td>
-  </tr>
-</table>
+## API Endpoints
 
----
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/` | Basic API status |
+| `GET` | `/health` | Health check |
+| `GET` | `/api/namespaces` | List supported knowledge namespaces |
+| `POST` | `/api/chat` | Non-streaming chat response |
+| `POST` | `/api/chat/stream` | Streaming chat response with Server-Sent Events |
+| `POST` | `/api/transcribe` | Voice transcription and normalization |
+| `POST` | `/api/feedback` | Store thumbs up/down feedback, with optional LangSmith linkage |
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Made_with_Precision_at-UOE_Lahore-red?style=for-the-badge" />
-</p>
+Example chat request:
+
+```bash
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What is the grading policy?",
+    "namespace": "rules",
+    "enhance_query": true,
+    "enable_agentic": false,
+    "top_k_retrieve": 5
+  }'
+```
+
+## RAG Pipeline
+
+The backend pipeline has four main stages:
+
+1. Query enhancement: rewrites informal or underspecified questions into retrieval-friendly queries.
+2. Retrieval: searches Pinecone with dense semantic retrieval and namespace-aware filtering.
+3. Generation: produces grounded answers using retrieved university context.
+4. Memory and feedback: keeps short-term session context in Redis and records user feedback.
+
+When `enable_agentic` is true, the pipeline can also classify intent, split complex questions into sub-questions, retry weak retrieval results, and run hallucination checks before returning an answer.
+
+## Data Ingestion
+
+Ingestion scripts live in `backend/Data_Ingestion/`. They prepare university source documents, generate embeddings with OpenAI, and upsert vectors into Pinecone namespaces.
+
+Common scripts include:
+
+- `canonical_bs_adp_ingestion.py`
+- `canonical_ms_phd_ingestion.py`
+- `rules_regulations_ingestion.py`
+- `university_about_ingestion.py`
+
+Run ingestion only after confirming that `OPENAI_API_KEY`, `PINECONE_API_KEY`, and `PINECONE_INDEX_NAME` are configured correctly.
+
+## Evaluation
+
+Evaluation utilities live in `backend/evaluation/` and include dataset generation plus RAGAS-based evaluation scripts. Use these when changing retrieval, prompts, chunking, or agentic behavior so answer quality can be checked against a consistent benchmark.
+
+## Deployment Notes
+
+- The backend can be deployed to Render using the included `render.yaml`.
+- The frontend is Vite-based and can be deployed to Vercel or any static hosting provider.
+- Configure production CORS, API URLs, Redis credentials, Pinecone credentials, and OpenAI credentials through the hosting provider's environment settings.
+- Do not commit real `.env` files or API keys.
+
+## Team
+
+Developed at the University of Education, Lahore.
+
+- Hammad Ali Tahir - Group Leader and Architect
+- Muhammad Muzaib - Backend Strategist
+- Ahmad Nawaz - Frontend Specialist
