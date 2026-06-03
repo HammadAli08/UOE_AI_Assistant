@@ -1,4 +1,11 @@
-# UOE AI Assistant
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="frontend/public/unnamed.jpg">
+    <img src="frontend/public/unnamed.jpg" alt="UOE AI Assistant" width="160" />
+  </picture>
+</p>
+
+<h1 align="center">🎓 UOE AI Assistant</h1>
 
 An AI assistant for the University of Education, Lahore, built with a FastAPI backend, a React/Vite frontend, and a retrieval-augmented generation pipeline over university knowledge sources.
 
