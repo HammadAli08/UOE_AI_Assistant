@@ -9,7 +9,7 @@
 
 An AI assistant for the University of Education, Lahore, built with a FastAPI backend, a React/Vite frontend, and a retrieval-augmented generation pipeline over university knowledge sources.
 
-The assistant answers student and staff questions about programs, course schemes, rules, regulations, fees, contacts, and general university information. It uses OpenAI models for generation and embeddings, Pinecone for vector search, Redis for short-term conversation memory, and optional LangSmith tracing for evaluation and feedback.
+The assistant answers student and staff questions about programs, course schemes, rules, regulations, fees, contacts, and general university information. It uses OpenAI models for generation and embeddings, Pinecone for vector search, client-provided chat history for conversational context, and optional LangSmith tracing for evaluation and feedback.
 
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)
@@ -25,7 +25,7 @@ The assistant answers student and staff questions about programs, course schemes
 - Enhances user queries before retrieval so short, informal, or Roman Urdu questions can still map to the right content.
 - Supports an optional agentic RAG mode with intent routing, query decomposition, retrieval retries, and grounding checks.
 - Supports voice input through transcription, transliteration, and query normalization.
-- Stores short-term session memory in Redis.
+- Keeps short-term conversational context in the frontend and sends recent chat history with each request.
 - Captures user feedback and can link it to LangSmith traces when tracing is enabled.
 
 ## Architecture
@@ -40,7 +40,7 @@ flowchart LR
     Pipeline --> Generator["Answer generator"]
     Pipeline --> Agentic["Agentic RAG tools"]
     Retriever --> Pinecone["Pinecone vector index"]
-    Pipeline --> Redis["Redis session memory"]
+    Frontend -->|"recent chat history"| Pipeline
     API --> LangSmith["LangSmith feedback/tracing"]
     Generator --> OpenAI["OpenAI chat models"]
     Enhancer --> OpenAI
@@ -62,7 +62,7 @@ flowchart LR
 .
 |-- backend/
 |   |-- main.py                         # FastAPI app and API endpoints
-|   |-- rag_pipeline/                   # Retrieval, generation, memory, and query enhancement
+|   |-- rag_pipeline/                   # Retrieval, generation, agentic flow, and query enhancement
 |   |-- rag_pipeline/agentic_rag/       # Intent routing, rewriting, grading, and grounding tools
 |   |-- Data_Ingestion/                 # Pinecone ingestion scripts
 |   |-- system_prompts/                 # Prompt files used by the RAG pipeline
@@ -83,7 +83,6 @@ flowchart LR
 
 - Python 3.12 or newer
 - Node.js 22.x
-- Redis, local or hosted
 - Pinecone index compatible with `text-embedding-3-large` vectors
 - OpenAI API key
 - Optional: LangSmith API key for tracing and feedback
@@ -103,11 +102,6 @@ Create `backend/.env`:
 OPENAI_API_KEY=your_openai_key
 PINECONE_API_KEY=your_pinecone_key
 PINECONE_INDEX_NAME=uoeaiassistant
-
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_USERNAME=default
-REDIS_PASSWORD=
 
 OPENAI_EMBEDDING_MODEL=text-embedding-3-large
 OPENAI_EMBEDDING_DIMENSIONS=3072
@@ -177,7 +171,7 @@ The backend pipeline has four main stages:
 1. Query enhancement: rewrites informal or underspecified questions into retrieval-friendly queries.
 2. Retrieval: searches Pinecone with dense semantic retrieval and namespace-aware filtering.
 3. Generation: produces grounded answers using retrieved university context.
-4. Memory and feedback: keeps short-term session context in Redis and records user feedback.
+4. Context and feedback: uses recent chat history supplied by the frontend and records user feedback.
 
 When `enable_agentic` is true, the pipeline can also classify intent, split complex questions into sub-questions, retry weak retrieval results, and run hallucination checks before returning an answer.
 
@@ -202,7 +196,7 @@ Evaluation utilities live in `backend/evaluation/` and include dataset generatio
 
 - The backend can be deployed to Render using the included `render.yaml`.
 - The frontend is Vite-based and can be deployed to Vercel or any static hosting provider.
-- Configure production CORS, API URLs, Redis credentials, Pinecone credentials, and OpenAI credentials through the hosting provider's environment settings.
+- Configure production CORS, API URLs, Pinecone credentials, and OpenAI credentials through the hosting provider's environment settings.
 - Do not commit real `.env` files or API keys.
 
 ## Team
