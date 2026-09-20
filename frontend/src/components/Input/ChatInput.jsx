@@ -39,7 +39,6 @@ function ChatInput({ onSend, onStop, isStreaming }) {
   }, []);
 
   const turnCount = useChatStore((s) => s.turnCount);
-  const apiOnline = useChatStore((s) => s.apiOnline);
   const namespace = useChatStore((s) => s.namespace);
   const setNamespace = useChatStore((s) => s.setNamespace);
   const settings = useChatStore((s) => s.settings);
@@ -453,26 +452,13 @@ function ChatInput({ onSend, onStop, isStreaming }) {
           </div>
         </div>
 
-        {/* ── Bottom status bar with pulsing online indicator ── */}
-        <div className="flex items-center justify-between mt-2 px-1">
+        {/* ── Bottom helper ── */}
+        <div className="flex items-center mt-2 px-1">
           <span className="hidden sm:inline-flex items-center gap-1 text-2xs text-mist/60">
             <kbd className="px-1.5 py-0.5 rounded bg-white/[0.03] border border-white/[0.06] text-2xs font-mono text-mist/50">
               Enter
             </kbd>
             <span className="ml-0.5">to send</span>
-          </span>
-          <span className="flex items-center gap-1.5 text-2xs text-mist/60">
-            <motion.span
-              animate={apiOnline === true ? { scale: [1, 1.2, 1] } : {}}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              className={clsx(
-                'w-1.5 h-1.5 rounded-full',
-                apiOnline === true && 'bg-green-500/80',
-                apiOnline === false && 'bg-red-500/80',
-                apiOnline === null && 'bg-mustard-500/60'
-              )}
-            />
-            {apiOnline === true ? 'Online' : apiOnline === false ? 'Offline' : 'Connecting…'}
           </span>
         </div>
       </div>
