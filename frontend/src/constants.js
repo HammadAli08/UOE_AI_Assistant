@@ -5,10 +5,12 @@ import { GraduationCap, FlaskConical, ScrollText, Building2 } from 'lucide-react
 
 // In production (Vercel) VITE_API_URL points to the Render backend.
 // In local dev the Vite proxy forwards /api → localhost:8000.
-// API base URL (from environment variable or fallback to /api for local dev)
-export const API_BASE = import.meta.env.VITE_API_URL || '/api';
+// API base URL (from environment variable or fallback to /api for local dev).
+// Remove trailing slashes so both ".../api" and ".../api/" behave identically.
+const RAW_API_BASE = import.meta.env.VITE_API_URL || '/api';
+export const API_BASE = RAW_API_BASE.replace(/\/+$/, '');
 
-// Base URL for non-api health checks (strips /api suffix)
+// Base URL for non-api health checks (strips the final /api segment).
 export const BACKEND_BASE = API_BASE.replace(/\/api$/, '');
 
 export const NAMESPACES = [
