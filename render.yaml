@@ -32,15 +32,6 @@ services:
         value: RAG_FYP
       - key: LANGSMITH_ENDPOINT
         value: https://api.smith.langchain.com
-      # ── Redis (short-term memory) ──
-      - key: REDIS_HOST
-        sync: false
-      - key: REDIS_PORT
-        sync: false
-      - key: REDIS_USERNAME
-        value: default
-      - key: REDIS_PASSWORD
-        sync: false
       # ── App ──
       - key: APP_ENV
         value: production
