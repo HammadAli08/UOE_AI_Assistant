@@ -31,7 +31,7 @@ const team = [
     role: 'API Engineer',
     badge: null,
     icon: Server,
-    desc: 'Built the FastAPI backend, streaming endpoints, Redis memory integration, and Pinecone vector store connectivity.',
+    desc: 'Built the FastAPI backend, streaming endpoints, stateless chat-history flow, and Pinecone vector store connectivity.',
     accentColor: '#7B9EC9',
   },
   {
