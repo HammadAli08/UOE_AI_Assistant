@@ -27,8 +27,8 @@ const features = [
     icon: Database,
     num: '03',
     title: 'Conversation Memory',
-    desc: 'Redis-powered session memory retains context across your conversation — no need to repeat yourself.',
-    checklist: ['Redis powered', 'Session persistence', 'Context aware'],
+    desc: 'Client-provided conversation history keeps follow-up questions contextual without requiring server-side session storage.',
+    checklist: ['Browser-held context', 'Stateless backend', 'Context aware'],
   },
   {
     icon: RefreshCw,
