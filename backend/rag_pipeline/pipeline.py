@@ -1,8 +1,8 @@
 """
 RAG Pipeline Orchestrator
 
-Main pipeline class that orchestrates all RAG components with short-term
-conversation memory, streaming, LangSmith tracing, and Agentic RAG.
+Main pipeline class that orchestrates all RAG components with client-provided
+conversation history, streaming, LangSmith tracing, and Agentic RAG.
 
 Two execution paths:
   1. Standard RAG: retrieve → generate (single-step).
@@ -31,7 +31,6 @@ from .query_enhancer import get_query_enhancer
 from .query_filter_parser import get_query_filter_parser
 from .retriever import get_retriever
 from .generator import get_generator
-from .memory import get_memory
 from .agentic_rag import AgentState, get_agentic_graph
 from .agentic_rag.utils import apply_grounding_disclaimer
 
@@ -84,7 +83,6 @@ class RAGPipeline:
         self.filter_parser = get_query_filter_parser()
         self.retriever = get_retriever()
         self.generator = get_generator()
-        self.memory = get_memory()
         self.agentic_graph = get_agentic_graph(
             self.retriever, self.generator, self.query_enhancer
         )
@@ -104,12 +102,13 @@ class RAGPipeline:
         session_id: str,
         chat_history: Optional[List[Dict[str, str]]] = None,
     ) -> List[Dict[str, str]]:
-        """Prefer explicit history; otherwise read from session memory."""
-        if chat_history is not None:
-            return chat_history
-        if session_id:
-            return self.memory.get_history(session_id)
-        return []
+        """Use conversation history supplied by the client.
+
+        The backend is intentionally stateless for chat memory. The React client
+        sends the recent turns with each request, and persisted conversations can
+        be restored from Supabase before being sent back here.
+        """
+        return chat_history or []
 
     # ── NON-STREAMING QUERY ──────────────────────────────────────────
 
@@ -129,8 +128,6 @@ class RAGPipeline:
 
         chitchat_response = _handle_chitchat(user_query)
         if chitchat_response:
-            if session_id:
-                self.memory.add_turn(session_id, user_query, chitchat_response)
             return {
                 "answer": chitchat_response, "sources": [],
                 "enhanced_query": user_query,
@@ -197,8 +194,6 @@ class RAGPipeline:
 
             if agentic_state.direct_response:
                 answer = agentic_state.direct_response
-                if session_id:
-                    self.memory.add_turn(session_id, user_query, answer)
                 run_id = None
                 try:
                     rt = get_current_run_tree()
@@ -219,8 +214,6 @@ class RAGPipeline:
 
             if agentic_state.clarification and not agentic_state.all_relevant:
                 fallback = agentic_state.clarification
-                if session_id:
-                    self.memory.add_turn(session_id, user_query, fallback)
                 run_id = None
                 try:
                     rt = get_current_run_tree()
@@ -273,8 +266,6 @@ class RAGPipeline:
                 "No relevant documents found for your query in this namespace. "
                 "Please try rephrasing or check if you selected the correct category."
             )
-            if session_id:
-                self.memory.add_turn(session_id, user_query, no_result)
             _run_id = None
             try:
                 _rt = get_current_run_tree()
@@ -336,8 +327,6 @@ class RAGPipeline:
 
         logger.info("⏱ generate: %.2fs", time.perf_counter() - t_generate)
 
-        if session_id:
-            self.memory.add_turn(session_id, user_query, answer)
 
         # ── Capture LangSmith run_id for feedback linkage ────────
         run_id = None
@@ -378,8 +367,6 @@ class RAGPipeline:
 
         chitchat_response = _handle_chitchat(user_query)
         if chitchat_response:
-            if session_id:
-                self.memory.add_turn(session_id, user_query, chitchat_response)
             yield {
                 "type": "metadata", "sources": [],
                 "enhanced_query": user_query,
@@ -448,8 +435,6 @@ class RAGPipeline:
 
             if agentic_state.direct_response:
                 answer = agentic_state.direct_response
-                if session_id:
-                    self.memory.add_turn(session_id, user_query, answer)
                 run_id = None
                 try:
                     rt = get_current_run_tree()
@@ -472,8 +457,6 @@ class RAGPipeline:
 
             if agentic_state.clarification and not agentic_state.all_relevant:
                 fallback = agentic_state.clarification
-                if session_id:
-                    self.memory.add_turn(session_id, user_query, fallback)
                 run_id = None
                 try:
                     rt = get_current_run_tree()
@@ -528,8 +511,6 @@ class RAGPipeline:
                 "No relevant documents found for your query in this namespace. "
                 "Please try rephrasing or check if you selected the correct category."
             )
-            if session_id:
-                self.memory.add_turn(session_id, user_query, no_result)
             _run_id = None
             try:
                 _rt = get_current_run_tree()
@@ -648,8 +629,6 @@ class RAGPipeline:
                     yield {"type": "token", "content": updated_answer[len(full_answer):]}
                 full_answer = updated_answer
 
-        if session_id:
-            self.memory.add_turn(session_id, user_query, full_answer)
 
         latency_ms = (time.perf_counter() - t_start) * 1000
         logger.info("⏱ TOTAL: %.2fs", latency_ms / 1000)
