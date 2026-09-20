@@ -239,13 +239,6 @@ function ChatInput({ onSend, onStop, isStreaming }) {
           </div>
         )}
 
-        {apiOnline === false && (
-          <div className="flex items-center gap-2 mb-3 px-4 py-2.5 rounded-xl bg-red-500/[0.08] border border-red-500/20 text-red-400 text-xs">
-            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-            Backend is offline. Please check the server.
-          </div>
-        )}
-
         {/* ── Input panel — solid surface, static focus ── */}
         <div
           className={clsx(
