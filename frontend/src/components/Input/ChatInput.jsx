@@ -50,7 +50,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
   const atMaxTurns = turnCount >= MAX_TURNS;
   const charCount = value.length;
   const overLimit = charCount > MAX_QUERY_LENGTH;
-  const canSend = value.trim().length > 0 && !overLimit && !isStreaming && !atMaxTurns && apiOnline !== false;
+  const canSend = value.trim().length > 0 && !overLimit && !isStreaming && !atMaxTurns;
   const currentNs = NAMESPACES.find((n) => n.id === namespace);
 
   // Sync draft input from store (e.g., when retry is clicked)
@@ -400,7 +400,7 @@ function ChatInput({ onSend, onStop, isStreaming }) {
                 {!isStreaming && (
                   <button
                     onClick={vttState === 'listening' ? stopRecordingAndTranscribe : startRecording}
-                    disabled={vttState === 'transcribing' || atMaxTurns || apiOnline === false}
+                    disabled={vttState === 'transcribing' || atMaxTurns}
                     className={clsx(
                       'w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300',
                       vttState === 'listening'
