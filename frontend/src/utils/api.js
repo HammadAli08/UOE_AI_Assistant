@@ -9,7 +9,7 @@ import { API_BASE, BACKEND_BASE } from '@/constants';
  */
 export async function checkHealth() {
   try {
-    const res = await fetch(`${BACKEND_BASE}/health`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BACKEND_BASE}/health`, { signal: AbortSignal.timeout(10000) });
     return res.ok;
   } catch {
     return false;
