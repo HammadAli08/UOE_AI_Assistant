@@ -13,7 +13,6 @@ const navLinks = [
 const techLinks = [
   'OpenAI GPT-4o',
   'Pinecone',
-  'Redis Cloud',
   'LangSmith',
   'FastAPI',
 ];
