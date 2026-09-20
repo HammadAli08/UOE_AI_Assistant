@@ -33,17 +33,6 @@ if LANGSMITH_TRACING_ENABLED and LANGSMITH_API_KEY:
     os.environ["LANGCHAIN_ENDPOINT"] = LANGSMITH_ENDPOINT
 
 # =============================================================================
-# REDIS CONFIGURATION (Short-Term Memory — Redis Cloud)
-# =============================================================================
-
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_USERNAME = os.getenv("REDIS_USERNAME", "default")
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
-MEMORY_MAX_TURNS = int(os.getenv("MEMORY_MAX_TURNS", "10"))
-MEMORY_TTL_SECONDS = int(os.getenv("MEMORY_TTL_SECONDS", "1800"))
-
-# =============================================================================
 # PINECONE CONFIGURATION
 # =============================================================================
 
